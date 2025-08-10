@@ -1,0 +1,39 @@
+*{box-sizing:border-box}
+html,body{min-height:100%}
+html{font-size:16px}
+body{
+  margin:0;
+  color:var(--fx-text);
+  min-height:100vh;
+  background:linear-gradient(180deg,#fff 0%, var(--fx-bg) 100%);
+  background-color:var(--fx-bg);
+  background-attachment:fixed;
+  font-family:'Segoe UI Variable','Segoe UI',-apple-system,BlinkMacSystemFont,'Inter',Arial,'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* 通用隐藏辅助类 */
+.hidden{display:none !important}
+
+button{font:inherit}
+
+.app-shell{min-height:100vh; display:flex; flex-direction:column; padding:12px}
+.app-main{flex:1 1 auto; min-height:0; display:grid; grid-template-columns:260px 1fr; gap:16px; padding:12px 0}
+
+.surface{background:var(--fx-surface); backdrop-filter:saturate(1.2) blur(var(--fx-blur)); -webkit-backdrop-filter:saturate(1.2) blur(var(--fx-blur)); border:1px solid var(--fx-border); border-radius:var(--fx-radius); box-shadow:var(--fx-shadow)}
+
+.btn{display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:10px; border:1px solid var(--fx-border); background:var(--fx-surface-strong); color:var(--fx-text); cursor:pointer; transition:transform var(--fx-transition), background var(--fx-transition), box-shadow var(--fx-transition)}
+.btn:hover{background:var(--fx-hover)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--fx-accent); color:white; border-color:transparent}
+.btn.primary:hover{background:#0a77e6}
+.btn.danger{background:var(--fx-danger); color:#fff; border-color:transparent}
+.btn.danger:hover{filter:brightness(0.95)}
+
+.icon{width:18px; height:18px;}
+
+.input{height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--fx-border); background:var(--fx-surface-strong); outline:none; transition:border var(--fx-transition), box-shadow var(--fx-transition)}
+.input:focus{border-color:var(--fx-accent); box-shadow:0 0 0 3px var(--fx-accent-muted)}
+
+hr.sep{border:none; height:1px; background:var(--fx-border); margin:16px 0}

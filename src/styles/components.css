@@ -1,0 +1,67 @@
+.search{display:flex; align-items:center; gap:8px}
+.search .input{width:320px}
+
+.command{display:flex; align-items:center; gap:6px}
+.command .btn{height:34px}
+
+.badge{display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; background:var(--fx-accent-muted); color:#0b5abf; font-size:12px; font-weight:600}
+
+.kbd{font:500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; color:var(--fx-text-muted)}
+
+/* 小问号帮助图标 */
+.help{
+  display:inline-grid; place-items:center; width:18px; height:18px;
+  border-radius:50%; border:1px solid var(--fx-border); color:var(--fx-text-muted);
+  font:600 12px/1 'Segoe UI', sans-serif; cursor:default;
+  background:var(--fx-surface-strong);
+}
+.help:hover{background:var(--fx-hover);}
+
+/* 现代化下拉选择器样式 */
+.select{position:relative; display:inline-flex; align-items:center; height:36px;}
+.select select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  height:36px; padding:0 36px 0 12px; border-radius:10px; border:1px solid var(--fx-border);
+  background:var(--fx-surface-strong); color:var(--fx-text); outline:none;
+  transition:border var(--fx-transition), box-shadow var(--fx-transition), background var(--fx-transition);
+}
+.select select:focus{border-color:var(--fx-accent); box-shadow:0 0 0 3px var(--fx-accent-muted)}
+.select::after{
+  content:""; position:absolute; right:12px; width:0; height:0; pointer-events:none;
+  border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid var(--fx-text-muted);
+}
+
+/* 现代化 tooltip（浅色、在问号上方） */
+.help[data-tip]{position:relative}
+.help[data-tip]::after{
+  content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 10px);
+  transform:translate(-50%,-4px); white-space:nowrap; background:var(--fx-surface-strong);
+  color:var(--fx-text); padding:8px 10px; border-radius:10px; border:1px solid var(--fx-border);
+  font-size:12px; line-height:1.2; box-shadow:var(--fx-shadow); opacity:0; pointer-events:none;
+  transition:opacity var(--fx-transition), transform var(--fx-transition); z-index:30;
+}
+.help[data-tip]::before{
+  content:""; position:absolute; left:50%; bottom:calc(100% + 4px); transform:translateX(-50%) rotate(45deg);
+  width:10px; height:10px; background:var(--fx-surface-strong); border-left:1px solid var(--fx-border); border-top:1px solid var(--fx-border);
+  opacity:0; transition:opacity var(--fx-transition); z-index:29;
+}
+.help[data-tip]:hover::after,.help[data-tip]:hover::before{opacity:1}
+
+/* 自定义下拉弹出菜单（现代化） */
+.fx-select{position:relative; display:inline-block}
+.fx-select.open{z-index:1000}
+.fx-select .trigger{
+  display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 12px; border-radius:10px;
+  border:1px solid var(--fx-border); background:var(--fx-surface-strong); color:var(--fx-text);
+}
+.fx-select .trigger:hover{background:var(--fx-hover)}
+.fx-select .fx-menu{
+  position:absolute; top:calc(100% + 8px); right:0; min-width:220px; padding:6px;
+  background:var(--fx-surface-strong); border:1px solid var(--fx-border); border-radius:12px; box-shadow:var(--fx-shadow);
+  opacity:0; transform:translateY(-4px); pointer-events:none; transition:opacity var(--fx-transition), transform var(--fx-transition); z-index:1001;
+}
+.fx-select.open .fx-menu{opacity:1; transform:translateY(0); pointer-events:auto}
+.fx-select .option{display:block; list-style:none; padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--fx-text)}
+.fx-select .option:hover{background:var(--fx-hover)}
+.fx-select .option[aria-selected="true"]{background:var(--fx-active)}
+

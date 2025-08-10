@@ -1,0 +1,70 @@
+<header class="header titlebar surface" aria-label="Title bar" data-tauri-drag-region>
+  <div class="brand">
+    <img class="app-icon" src="/src-tauri/icons/icon.png" alt="App icon" />
+    <span>设置</span>
+  </div>
+  <div class="spacer" aria-hidden="true"></div>
+  <div class="window-controls" aria-label="Window controls">
+    <button class="btn" data-win="min" aria-label="Minimize">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 9.5H13"/></svg>
+    </button>
+    <button class="btn" data-win="max" aria-label="Maximize">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1"/></svg>
+    </button>
+    <button class="btn danger" data-win="close" aria-label="Close">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4L12 12M12 4L4 12"/></svg>
+    </button>
+  </div>
+  </header>
+
+<main class="app-main" style="grid-template-columns:280px 1fr">
+  <aside class="sidebar surface settings-sidebar" aria-label="Settings categories">
+    <div class="nav">
+      <button class="btn active" data-cat="cat-appearance" aria-pressed="true">外观</button>
+      <button class="btn" data-cat="cat-engine">下载引擎</button>
+      <button class="btn" data-cat="cat-extensions">浏览器插件集成</button>
+    </div>
+  </aside>
+
+  <section class="content-area">
+    <div id="cat-appearance" class="settings-content surface" style="padding:12px">
+      <div class="command" style="justify-content:space-between">
+        <div class="command" style="gap:8px">
+          <div style="font-weight:600">主题</div>
+          <span class="help" data-tip="选择应用主题" aria-label="选择应用主题">?</span>
+        </div>
+        <label class="select" aria-label="主题">
+          <select id="theme-select">
+            <option value="system">跟随系统</option>
+            <option value="light">浅色模式</option>
+            <option value="dark">深色模式</option>
+          </select>
+        </label>
+      </div>
+      <hr class="sep"/>
+      <div class="command" style="justify-content:space-between">
+        <div class="command" style="gap:8px">
+          <div style="font-weight:600">语言</div>
+          <span class="help" data-tip="设置界面语言" aria-label="设置界面语言">?</span>
+        </div>
+        <label class="select" aria-label="语言">
+          <select id="lang-select">
+            <option value="system">System (简体中文)</option>
+            <option value="en">English</option>
+            <option value="zh-CN">简体中文</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div id="cat-engine" class="settings-content surface hidden" style="padding:12px">
+      <div class="kbd">尚无可用选项</div>
+    </div>
+
+    <div id="cat-extensions" class="settings-content surface hidden" style="padding:12px">
+      <div class="kbd">尚无可用选项</div>
+    </div>
+  </section>
+</main>
+
+

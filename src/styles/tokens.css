@@ -1,0 +1,40 @@
+:root{
+  --fx-accent:#0a84ff;
+  --fx-accent-weak:#66b7ff;
+  --fx-accent-muted:#e6f2ff;
+  --fx-bg:#f5f6f8;
+  --fx-surface:rgba(255,255,255,0.75);
+  --fx-surface-strong:#ffffff;
+  --fx-text:#1f2328;
+  --fx-text-muted:#5e6772;
+  --fx-border:rgba(0,0,0,0.08);
+  --fx-hover:rgba(10,132,255,0.08);
+  --fx-active:rgba(10,132,255,0.14);
+  --fx-danger:#d92d20;
+  --fx-warning:#f59e0b;
+  --fx-success:#16a34a;
+  --fx-radius:12px;
+  --fx-radius-sm:8px;
+  --fx-shadow:0 1px 2px rgba(0,0,0,0.06),0 6px 20px rgba(0,0,0,0.08);
+  --fx-blur:12px;
+  --fx-transition:160ms cubic-bezier(0.2,0,0,1);
+}
+
+/* 深色主题 */
+.dark-theme {
+  --fx-accent:#0a84ff;
+  --fx-accent-weak:#4a9eff;
+  --fx-accent-muted:rgba(10,132,255,0.15);
+  --fx-bg:#1a1a1a;
+  --fx-surface:rgba(255,255,255,0.05);
+  --fx-surface-strong:#2a2a2a;
+  --fx-text:#ffffff;
+  --fx-text-muted:#a0a0a0;
+  --fx-border:rgba(255,255,255,0.1);
+  --fx-hover:rgba(10,132,255,0.1);
+  --fx-active:rgba(10,132,255,0.2);
+  --fx-danger:#ff4444;
+  --fx-warning:#ffaa00;
+  --fx-success:#00cc66;
+  --fx-shadow:0 1px 2px rgba(0,0,0,0.3),0 6px 20px rgba(0,0,0,0.2);
+}

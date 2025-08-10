@@ -1,0 +1,7 @@
+@keyframes fadeInUp{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)}}
+.fade-in{animation:fadeInUp .36s var(--fx-transition) both}
+
+.ripple{position:absolute; border-radius:50%; transform:scale(0); animation:ripple .6s ease-out; background:rgba(255,255,255,.45); pointer-events:none}
+@keyframes ripple{to{transform:scale(3); opacity:0}}
+
+.btn.ripple-host{position:relative; overflow:hidden}
