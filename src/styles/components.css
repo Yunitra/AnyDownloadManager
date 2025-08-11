@@ -4,7 +4,7 @@
 .command{display:flex; align-items:center; gap:6px}
 .command .btn{height:34px}
 
-.badge{display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; background:var(--fx-accent-muted); color:#0b5abf; font-size:12px; font-weight:600}
+.badge{display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; background:var(--fx-accent-muted); color:var(--fx-accent); font-size:12px; font-weight:600}
 
 .kbd{font:500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; color:var(--fx-text-muted)}
 
@@ -31,7 +31,7 @@
   border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid var(--fx-text-muted);
 }
 
-/* 现代化 tooltip（浅色、在问号上方） */
+/* 现代化提示框 */
 .help[data-tip]{position:relative}
 .help[data-tip]::after{
   content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 10px);
@@ -47,7 +47,7 @@
 }
 .help[data-tip]:hover::after,.help[data-tip]:hover::before{opacity:1}
 
-/* 自定义下拉弹出菜单（现代化） */
+/* 自定义下拉弹出菜单 */
 .fx-select{position:relative; display:inline-block}
 .fx-select.open{z-index:1000}
 .fx-select .trigger{

@@ -14,10 +14,9 @@
     "windows": [
       {
         "title": "Any Download Manager",
-        "minWidth": 800,
-        "minHeight": 600,
         "width": 1280,
         "height": 720,
+        "resizable": false,
         "decorations": false
       }
     ],

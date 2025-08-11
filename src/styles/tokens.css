@@ -18,6 +18,8 @@
   --fx-shadow:0 1px 2px rgba(0,0,0,0.06),0 6px 20px rgba(0,0,0,0.08);
   --fx-blur:12px;
   --fx-transition:160ms cubic-bezier(0.2,0,0,1);
+  --fx-accent-hover:#0a77e6;
+  --fx-track:#e9eef5;
 }
 
 /* 深色主题 */
@@ -37,4 +39,6 @@
   --fx-warning:#ffaa00;
   --fx-success:#00cc66;
   --fx-shadow:0 1px 2px rgba(0,0,0,0.3),0 6px 20px rgba(0,0,0,0.2);
+  --fx-accent-hover:#0a6fd6;
+  --fx-track:rgba(255,255,255,0.08);
 }
