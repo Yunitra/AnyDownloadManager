@@ -7,6 +7,7 @@ import { initMicroInteractions } from './ui/microinteractions';
 import { wireWindowControls } from './ui/windowControls';
 import { openSettingsWindow } from './ui/settingsWindow';
 import { applyThemeToDocument, getSavedTheme } from './ui/settings';
+import { initI18n } from './ui/i18n';
 
 (function mount(){
   const app = document.createElement('div');
@@ -21,6 +22,8 @@ import { applyThemeToDocument, getSavedTheme } from './ui/settings';
     </main>
     ${statusbar}`;
   document.body.appendChild(app);
+  // 应用文案国际化
+  initI18n(document);
   // 应用主题
   applyThemeToDocument(getSavedTheme());
   initMicroInteractions();

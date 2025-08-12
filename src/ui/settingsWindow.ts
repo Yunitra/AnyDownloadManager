@@ -8,7 +8,7 @@ function isTauriEnv(): boolean {
 export async function openSettingsWindow(): Promise<void> {
   if (!isTauriEnv()) {
     // 浏览器预览时，直接在同页打开新的标签来模拟
-    window.open('/settings.html', '_blank');
+    window.open('settings.html', '_blank');
     return;
   }
 
@@ -52,7 +52,7 @@ export async function openSettingsWindow(): Promise<void> {
   
   // @ts-ignore
   const win = new WebviewWindow('settings', {
-    url: '/settings.html',
+    url: 'settings.html',
     title: '设置',
     width: targetWidth,
     height: targetHeight,

@@ -7,7 +7,8 @@
 type ThemeMode = 'light' | 'dark' | 'system';
 
 const STORAGE_KEY_THEME = 'adm.theme';
-const STORAGE_KEY_LANG = 'adm.lang';
+// Language is managed via i18n module
+import { setLang, getSavedLang } from './i18n';
 
 export function initSettingsUI(): void {
   bindCategoryNav();
@@ -44,14 +45,15 @@ function initThemeControls(): void {
 }
 
 function initLanguageControls(): void {
-  const current = localStorage.getItem(STORAGE_KEY_LANG) || 'system';
+  const current = getSavedLang();
   const select = document.getElementById('lang-select') as HTMLSelectElement | null;
   if (select) {
     select.value = current;
     select.addEventListener('change', () => {
       const next = select.value;
-      localStorage.setItem(STORAGE_KEY_LANG, next);
-      // 预留：未来接入 i18n。此处仅保存。
+      setLang(next as any);
+      // 语言切换后刷新增强下拉的触发文本
+      refreshEnhancedSelectLabels();
     });
   }
 }
@@ -103,6 +105,31 @@ function enhanceModernSelects(): void {
     label.style.display = 'none';
   });
 }
+
+// 当语言变化或翻译应用时，刷新自定义下拉的显示文本以匹配已翻译的 <option>
+function refreshEnhancedSelectLabels(): void {
+  document.querySelectorAll('label.select').forEach((label) => {
+    const native = label.querySelector('select') as HTMLSelectElement | null;
+    const wrapper = label.nextElementSibling as HTMLElement | null; // .fx-select
+    if (!native || !wrapper || !wrapper.classList.contains('fx-select')) return;
+    const trigger = wrapper.querySelector('.trigger') as HTMLButtonElement | null;
+    const menu = wrapper.querySelector('.fx-menu') as HTMLElement | null;
+    if (trigger && native.selectedOptions[0]) {
+      trigger.textContent = native.selectedOptions[0].text;
+    }
+    if (menu) {
+      const items = Array.from(menu.querySelectorAll<HTMLElement>('.option'));
+      const opts = Array.from(native.options);
+      for (let i = 0; i < Math.min(items.length, opts.length); i++) {
+        items[i].textContent = opts[i].text;
+      }
+    }
+  });
+}
+
+// 监听语言变化事件（由 i18n.setLang 触发或 storage 同步）以刷新自定义下拉
+window.addEventListener('adm:lang-changed', () => refreshEnhancedSelectLabels());
+window.addEventListener('storage', (e) => { if (e.key === 'adm.lang') refreshEnhancedSelectLabels(); });
 
 export function applyThemeToDocument(mode: ThemeMode): void {
   const root = document.documentElement;

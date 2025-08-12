@@ -27,4 +27,15 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  // Serve static assets (icons) from src-tauri/icons at / during dev and copy to dist at build
+  publicDir: "src-tauri/icons",
+  // Ensure multi-page build so settings.html is included in dist
+  build: {
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        settings: 'settings.html',
+      },
+    },
+  },
 }));
