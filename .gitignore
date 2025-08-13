@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# AI IDE directories
+# AI IDE files
 .cursor/
 .kiro/
+.cursorignore

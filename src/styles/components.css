@@ -17,13 +17,14 @@
 }
 .help:hover{background:var(--fx-hover);}
 
-/* 现代化下拉选择器样式 */
+/* 原生下拉选择器样式 */
 .select{position:relative; display:inline-flex; align-items:center; height:36px;}
 .select select{
   appearance:none; -webkit-appearance:none; -moz-appearance:none;
   height:36px; padding:0 36px 0 12px; border-radius:10px; border:1px solid var(--fx-border);
   background:var(--fx-surface-strong); color:var(--fx-text); outline:none;
   transition:border var(--fx-transition), box-shadow var(--fx-transition), background var(--fx-transition);
+  font: inherit;
 }
 .select select:focus{border-color:var(--fx-accent); box-shadow:0 0 0 3px var(--fx-accent-muted)}
 .select::after{
@@ -31,37 +32,72 @@
   border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid var(--fx-text-muted);
 }
 
-/* 现代化提示框 */
-.help[data-tip]{position:relative}
-.help[data-tip]::after{
+.tip[data-tip]{position:relative}
+.tip[data-tip]::after{
   content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 10px);
   transform:translate(-50%,-4px); white-space:nowrap; background:var(--fx-surface-strong);
   color:var(--fx-text); padding:8px 10px; border-radius:10px; border:1px solid var(--fx-border);
   font-size:12px; line-height:1.2; box-shadow:var(--fx-shadow); opacity:0; pointer-events:none;
   transition:opacity var(--fx-transition), transform var(--fx-transition); z-index:30;
 }
-.help[data-tip]::before{
+.tip[data-tip]::before{
   content:""; position:absolute; left:50%; bottom:calc(100% + 4px); transform:translateX(-50%) rotate(45deg);
   width:10px; height:10px; background:var(--fx-surface-strong); border-left:1px solid var(--fx-border); border-top:1px solid var(--fx-border);
   opacity:0; transition:opacity var(--fx-transition); z-index:29;
 }
-.help[data-tip]:hover::after,.help[data-tip]:hover::before{opacity:1}
+.tip[data-tip]:hover::after,.tip[data-tip]:hover::before{opacity:1}
+
+/* 帮助图标的错误变种 */
+.help.error{border-color:var(--fx-danger); background:var(--fx-danger); color:#fff; font-weight:800}
 
 /* 自定义下拉弹出菜单 */
 .fx-select{position:relative; display:inline-block}
 .fx-select.open{z-index:1000}
 .fx-select .trigger{
   display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 12px; border-radius:10px;
-  border:1px solid var(--fx-border); background:var(--fx-surface-strong); color:var(--fx-text);
+  border:1px solid var(--fx-border); background:var(--fx-surface-strong); color:var(--fx-text); font: inherit;
 }
 .fx-select .trigger:hover{background:var(--fx-hover)}
-.fx-select .fx-menu{
-  position:absolute; top:calc(100% + 8px); right:0; min-width:220px; padding:6px;
+/* Base fx-menu styles (work for both in-place and portal) */
+.fx-menu{
   background:var(--fx-surface-strong); border:1px solid var(--fx-border); border-radius:12px; box-shadow:var(--fx-shadow);
-  opacity:0; transform:translateY(-4px); pointer-events:none; transition:opacity var(--fx-transition), transform var(--fx-transition); z-index:1001;
+  max-height: min(50vh, 360px); overflow:auto; padding:6px; z-index:1001;
 }
+/* In-place position under trigger */
+.fx-select .fx-menu{ position:absolute; top:calc(100% + 8px); right:0; min-width:220px; opacity:0; transform:translateY(-4px); pointer-events:none; transition:opacity var(--fx-transition), transform var(--fx-transition); }
 .fx-select.open .fx-menu{opacity:1; transform:translateY(0); pointer-events:auto}
-.fx-select .option{display:block; list-style:none; padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--fx-text)}
-.fx-select .option:hover{background:var(--fx-hover)}
-.fx-select .option[aria-selected="true"]{background:var(--fx-active)}
+.fx-menu .option{display:block; list-style:none; padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--fx-text)}
+.fx-menu .option:hover{background:var(--fx-hover)}
+.fx-menu .option[aria-selected="true"]{background:var(--fx-active)}
 
+/* Field wrapper for inline icons */
+.field{ position: relative; display:flex; }
+.field .input{ flex: 1; }
+.field-url .input{ padding-right: 36px; }
+.field-url.has-error .input{ padding-left: 36px; }
+.field .error-icon{ position:absolute; left:8px; top:50%; transform:translateY(-50%); z-index: 5; }
+.field .affix-right{ position:absolute; right:8px; top:50%; transform:translateY(-50%); z-index:5; }
+.field .affix-btn{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; border:none; background:transparent; color:var(--fx-text-muted); z-index:10; }
+.field .affix-btn:hover{ background: var(--fx-hover); color:var(--fx-text); }
+
+/* Icon-only button and SVG fix */
+.btn.icon-only{ width:36px; padding:0 8px; }
+.btn.icon-only .icon{ width:18px; height:18px; display:block; }
+
+/* Top-layer portal menu */
+.fx-menu.portal{ position: fixed !important; top:auto; left:auto; right:auto; bottom:auto; z-index: 20000 !important; opacity:1 !important; transform:none !important; pointer-events:auto !important; }
+
+/* 模态弹窗 */
+.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:1000}
+.modal.open{display:flex}
+.modal-backdrop{position:absolute; inset:0; background:rgba(0,0,0,0.3); backdrop-filter:blur(2px)}
+.modal-panel{position:relative; width:min(560px, 92vw); padding:16px; border-radius:var(--fx-radius); border:1px solid var(--fx-border); box-shadow:var(--fx-shadow)}
+.modal-header{padding:8px 8px 4px}
+.modal-header h3{margin:0}
+.modal-body{padding:8px}
+.modal-footer{display:flex; gap:8px; justify-content:flex-end; padding:8px}
+
+/* Simple form layout */
+.form-row{display:grid; grid-template-columns:120px 1fr; gap:10px; align-items:center; margin:10px 0}
+.form-row label{color:var(--fx-text-muted); font-weight:600}
+.form-row .help-text{grid-column:2 / 3; color:var(--fx-danger); font-size:12px; min-height:16px}
