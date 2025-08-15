@@ -56,10 +56,9 @@ export async function openSettingsWindow(): Promise<void> {
     title: '设置',
     width: targetWidth,
     height: targetHeight,
-    resizable: true,
+    resizable: false,
     decorations: false,
     visible: true,
     ...(posX !== undefined && posY !== undefined ? { x: posX, y: posY } : { center: true }),
-    parent: getCurrentWindow()
   })
 }

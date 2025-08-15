@@ -7,11 +7,6 @@ const dicts: Record<Lang, Dict> = {
     'title.main': 'Any Download Manager',
     'title.settings': 'Settings',
 
-    'header.menu.file': 'File',
-    'header.menu.tasks': 'Tasks',
-    'header.menu.tools': 'Tools',
-    'header.menu.help': 'Help',
-
     'search.placeholder': 'Search in the list...',
     'search.aria': 'Search',
 
@@ -70,7 +65,7 @@ const dicts: Record<Lang, Dict> = {
     'status.items': 'Items',
     'status.active': 'Active',
     'status.total': 'Total',
-    // Dialogs
+    
     'dialog.addUrl.title': 'Add Download',
     'dialog.addUrl.url': 'URL',
     'dialog.addUrl.urlPlaceholder': 'https://example.com/file.zip',
@@ -88,11 +83,6 @@ const dicts: Record<Lang, Dict> = {
   'zh-CN': {
     'title.main': 'Any Download Manager',
     'title.settings': '设置',
-
-    'header.menu.file': '文件',
-    'header.menu.tasks': '任务',
-    'header.menu.tools': '工具',
-    'header.menu.help': '帮助',
 
     'search.placeholder': '在列表内搜索...',
     'search.aria': '搜索',

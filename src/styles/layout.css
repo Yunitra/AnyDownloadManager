@@ -1,9 +1,6 @@
 .header{position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 12px; margin:0; border-radius:var(--fx-radius); background:var(--fx-surface); border:1px solid var(--fx-border); box-shadow:var(--fx-shadow)}
 .titlebar{-webkit-app-region: drag; user-select:none}
-.menu{display:flex; gap:12px}
-.menu a{color:var(--fx-text); text-decoration:none; padding:8px 10px; border-radius:8px; transition:background var(--fx-transition)}
-.menu a:hover{background:var(--fx-hover)}
-.titlebar .menu a{-webkit-app-region: no-drag}
+.titlebar a{-webkit-app-region: no-drag}
 .brand{display:flex; align-items:center; gap:10px; font-weight:600}
 .brand .mark{display:inline-grid; place-items:center; width:28px; height:28px; border-radius:8px; background:var(--fx-accent); color:#fff; box-shadow:var(--fx-shadow)}
 .brand .app-icon{width:18px; height:18px; border-radius:4px}

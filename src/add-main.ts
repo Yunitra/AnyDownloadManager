@@ -41,7 +41,7 @@ function joinPath(dir: string, sub: string): string {
   const pasteBtn = document.getElementById('addwin-paste') as HTMLButtonElement;
   const catFx = document.getElementById('addwin-category') as HTMLDivElement;
   const catTrigger = catFx.querySelector('.trigger') as HTMLButtonElement;
-  const catMenu = catFx.querySelector('.fx-menu') as HTMLUListElement;
+  const catMenu = catFx.querySelector('.menu') as HTMLUListElement;
   const catLabel = catFx.querySelector('.selected-label') as HTMLElement;
   const sizeEl = document.getElementById('addwin-size') as HTMLDivElement;
   const pathInput = document.getElementById('addwin-path') as HTMLInputElement;
@@ -155,46 +155,22 @@ function joinPath(dir: string, sub: string): string {
   urlInput.addEventListener('blur', probeAndFill);
   urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') void probeAndFill(); });
 
-  // fx-select interactions with portal menu
-  let catMenuPlaceholder: Comment | null = null;
-  const restoreMenu = () => {
-    if (catMenuPlaceholder && catMenuPlaceholder.parentNode) {
-      catMenu.classList.remove('portal');
-      catMenu.style.cssText = '';
-      catMenuPlaceholder.parentNode.replaceChild(catMenu, catMenuPlaceholder);
-      catMenuPlaceholder = null;
-    }
-  };
-  const positionMenu = () => {
-    const rect = catTrigger.getBoundingClientRect();
-    catMenu.classList.add('portal');
-    catMenu.style.minWidth = `${Math.max(rect.width, 220)}px`;
-    const desired = Math.min(360, window.innerHeight * 0.5);
-    const spaceBelow = window.innerHeight - rect.bottom;
-    if (spaceBelow < desired + 16) {
-      catMenu.style.top = `${Math.max(8, rect.top - 8 - Math.min(desired, rect.top - 8))}px`;
-      catMenu.style.left = `${Math.max(8, rect.left)}px`;
-    } else {
-      catMenu.style.top = `${rect.bottom + 8}px`;
-      catMenu.style.left = `${Math.max(8, rect.left)}px`;
-    }
-  };
   catTrigger.addEventListener('click', () => {
     const willOpen = !catFx.classList.contains('open');
+    
+    // Close any other open selects first (for consistency with settings)
+    document.querySelectorAll('.select.open').forEach(select => {
+      if (select !== catFx) {
+        select.classList.remove('open');
+        const trigger = select.querySelector('.trigger');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+    
     catFx.classList.toggle('open');
     catTrigger.setAttribute('aria-expanded', String(willOpen));
-    if (willOpen) {
-      // move menu to body as portal and position
-      if (!catMenuPlaceholder) {
-        catMenuPlaceholder = document.createComment('cat-menu');
-        catMenu.parentElement?.replaceChild(catMenuPlaceholder, catMenu);
-        document.body.appendChild(catMenu);
-      }
-      positionMenu();
-      window.addEventListener('resize', positionMenu, { passive: true });
-      window.addEventListener('scroll', positionMenu, { passive: true });
-    }
   });
+
   catMenu.addEventListener('click', (e) => {
     const li = (e.target as HTMLElement).closest('.option') as HTMLElement | null;
     if (!li) return;
@@ -202,26 +178,19 @@ function joinPath(dir: string, sub: string): string {
     setCategory(val, true);
     catFx.classList.remove('open');
     catTrigger.setAttribute('aria-expanded', 'false');
-    restoreMenu();
-    window.removeEventListener('resize', positionMenu);
-    window.removeEventListener('scroll', positionMenu);
   });
+
   document.addEventListener('click', (e) => {
-    if (!catFx.contains(e.target as Node) && !catMenu.contains(e.target as Node)) {
+    if (!catFx.contains(e.target as Node)) {
       catFx.classList.remove('open');
       catTrigger.setAttribute('aria-expanded', 'false');
-      restoreMenu();
-      window.removeEventListener('resize', positionMenu);
-      window.removeEventListener('scroll', positionMenu);
     }
   });
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       catFx.classList.remove('open');
       catTrigger.setAttribute('aria-expanded', 'false');
-      restoreMenu();
-      window.removeEventListener('resize', positionMenu);
-      window.removeEventListener('scroll', positionMenu);
     }
   });
 

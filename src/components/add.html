@@ -29,8 +29,9 @@
           <input id="addwin-url" class="input" type="url" placeholder="https://..." data-i18n-attr="placeholder:dialog.addUrl.urlPlaceholder" />
           <span id="addwin-url-err" class="help error error-icon hidden" data-i18n-attr="data-tip:dialog.addUrl.urlInvalid,aria-label:dialog.addUrl.urlInvalid" aria-label="Invalid URL" title="!">!</span>
           <button class="affix-btn tip affix-right" id="addwin-paste" style="color:#000" data-i18n-attr="aria-label:dialog.addUrl.paste,data-tip:dialog.addUrl.paste" aria-label="Paste" data-tip="Paste">
-            <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M19 3h-4.18C14.4 2.42 13.3 2 12 2s-2.4.42-2.82 1H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM19 21H5V5h2v2h10V5h2v16z"/>
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <rect x="5" y="1" width="6" height="2" rx="1" fill="currentColor" opacity="0.3"/>
+              <rect x="3" y="3" width="10" height="11" rx="1.5"/>
             </svg>
           </button>
         </div>
@@ -40,12 +41,12 @@
       <div class="command" style="gap:12px; align-items:center">
         <div style="flex:4; display:flex; align-items:center; gap:8px">
           <label style="min-width:96px" data-i18n="dialog.addUrl.category">Category</label>
-          <div id="addwin-category" class="fx-select" style="flex:1">
+          <div id="addwin-category" class="select short" style="flex:1">
             <button type="button" class="trigger" aria-haspopup="listbox" aria-expanded="false">
               <span class="selected-label" data-i18n="sidebar.btn.auto">Auto</span>
               <svg viewBox="0 0 16 16" aria-hidden="true" class="icon"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
             </button>
-            <ul class="fx-menu" role="listbox">
+            <ul class="menu" role="listbox">
               <li class="option" role="option" data-value="auto" aria-selected="true" data-i18n="sidebar.btn.auto">Auto</li>
               <li class="option" role="option" data-value="image" data-i18n="sidebar.btn.image">Image</li>
               <li class="option" role="option" data-value="music" data-i18n="sidebar.btn.music">Music</li>

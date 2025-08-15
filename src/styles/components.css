@@ -17,21 +17,6 @@
 }
 .help:hover{background:var(--fx-hover);}
 
-/* 原生下拉选择器样式 */
-.select{position:relative; display:inline-flex; align-items:center; height:36px;}
-.select select{
-  appearance:none; -webkit-appearance:none; -moz-appearance:none;
-  height:36px; padding:0 36px 0 12px; border-radius:10px; border:1px solid var(--fx-border);
-  background:var(--fx-surface-strong); color:var(--fx-text); outline:none;
-  transition:border var(--fx-transition), box-shadow var(--fx-transition), background var(--fx-transition);
-  font: inherit;
-}
-.select select:focus{border-color:var(--fx-accent); box-shadow:0 0 0 3px var(--fx-accent-muted)}
-.select::after{
-  content:""; position:absolute; right:12px; width:0; height:0; pointer-events:none;
-  border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid var(--fx-text-muted);
-}
-
 .tip[data-tip]{position:relative}
 .tip[data-tip]::after{
   content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 10px);
@@ -50,25 +35,51 @@
 /* 帮助图标的错误变种 */
 .help.error{border-color:var(--fx-danger); background:var(--fx-danger); color:#fff; font-weight:800}
 
-/* 自定义下拉弹出菜单 */
-.fx-select{position:relative; display:inline-block}
-.fx-select.open{z-index:1000}
-.fx-select .trigger{
+.select{position:relative; display:inline-block}
+.select.open{z-index:1000}
+.select .trigger{
   display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 12px; border-radius:10px;
   border:1px solid var(--fx-border); background:var(--fx-surface-strong); color:var(--fx-text); font: inherit;
 }
-.fx-select .trigger:hover{background:var(--fx-hover)}
-/* Base fx-menu styles (work for both in-place and portal) */
-.fx-menu{
+.select .trigger:hover{background:var(--fx-hover)}
+.select .trigger > * {
+  pointer-events: none;
+}
+/* Base menu styles (work for both in-place and portal) */
+.menu{
   background:var(--fx-surface-strong); border:1px solid var(--fx-border); border-radius:12px; box-shadow:var(--fx-shadow);
   max-height: min(50vh, 360px); overflow:auto; padding:6px; z-index:1001;
 }
 /* In-place position under trigger */
-.fx-select .fx-menu{ position:absolute; top:calc(100% + 8px); right:0; min-width:220px; opacity:0; transform:translateY(-4px); pointer-events:none; transition:opacity var(--fx-transition), transform var(--fx-transition); }
-.fx-select.open .fx-menu{opacity:1; transform:translateY(0); pointer-events:auto}
-.fx-menu .option{display:block; list-style:none; padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--fx-text)}
-.fx-menu .option:hover{background:var(--fx-hover)}
-.fx-menu .option[aria-selected="true"]{background:var(--fx-active)}
+.select .menu{ 
+  position:absolute; 
+  top:100%; 
+  margin-top: 0;
+  opacity:0; 
+  pointer-events:none; 
+  transition:opacity var(--fx-transition), margin-top var(--fx-transition);
+  left: 0;
+  right: auto;
+  width: max-content;
+  min-width: 100%;
+  min-width: 220px;
+  width: auto;
+}
+.select.align-right .menu {
+  left: auto;
+  right: 0;
+}
+.select.short .menu {
+  max-height: 160px !important;
+}
+.select.open .menu{
+  opacity:1; 
+  margin-top: 4px;
+  pointer-events:auto;
+}
+.menu .option{display:block; list-style:none; padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--fx-text)}
+.menu .option:hover{background:var(--fx-hover)}
+.menu .option[aria-selected="true"]{background:var(--fx-active)}
 
 /* Field wrapper for inline icons */
 .field{ position: relative; display:flex; }
@@ -85,7 +96,7 @@
 .btn.icon-only .icon{ width:18px; height:18px; display:block; }
 
 /* Top-layer portal menu */
-.fx-menu.portal{ position: fixed !important; top:auto; left:auto; right:auto; bottom:auto; z-index: 20000 !important; opacity:1 !important; transform:none !important; pointer-events:auto !important; }
+.menu.portal{ position: fixed !important; top:auto; left:auto; right:auto; bottom:auto; z-index: 20000 !important; opacity:1 !important; transform:none !important; pointer-events:auto !important; }
 
 /* 模态弹窗 */
 .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:1000}

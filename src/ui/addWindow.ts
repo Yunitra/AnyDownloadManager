@@ -50,13 +50,12 @@ export async function openAddWindow(): Promise<void> {
   // @ts-ignore
   const win = new WebviewWindow('add', {
     url: 'add.html',
-    title: 'Add Download',
+    title: '添加下载',
     width: targetWidth,
     height: targetHeight,
     resizable: false,
     decorations: false,
     visible: true,
     ...(posX !== undefined && posY !== undefined ? { x: posX, y: posY } : { center: true }),
-    parent: getCurrentWindow()
   })
 }

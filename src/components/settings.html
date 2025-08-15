@@ -33,13 +33,17 @@
           <div style="font-weight:600" data-i18n="settings.theme.label">Theme</div>
           <span class="help tip" data-i18n-attr="data-tip:settings.theme.help,aria-label:settings.theme.help" data-tip="Choose the app theme" aria-label="Choose the app theme">?</span>
         </div>
-        <label class="select" data-i18n-attr="aria-label:settings.theme.label" aria-label="Theme">
-          <select id="theme-select">
-            <option value="system" data-i18n="settings.theme.system">System</option>
-            <option value="light" data-i18n="settings.theme.light">Light</option>
-            <option value="dark" data-i18n="settings.theme.dark">Dark</option>
-          </select>
-        </label>
+        <div id="theme-select" class="select align-right" data-i18n-attr="aria-label:settings.theme.label" aria-label="Theme">
+          <button type="button" class="trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="selected-label"></span>
+            <svg viewBox="0 0 16 16" aria-hidden="true" class="icon"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          </button>
+          <ul class="menu" role="listbox">
+            <li class="option" role="option" data-value="system" data-i18n="settings.theme.system">System</li>
+            <li class="option" role="option" data-value="light" data-i18n="settings.theme.light">Light</li>
+            <li class="option" role="option" data-value="dark" data-i18n="settings.theme.dark">Dark</li>
+          </ul>
+        </div>
       </div>
       <hr class="sep"/>
       <div class="command" style="justify-content:space-between">
@@ -47,13 +51,17 @@
           <div style="font-weight:600" data-i18n="settings.lang.label">Language</div>
           <span class="help tip" data-i18n-attr="data-tip:settings.lang.help,aria-label:settings.lang.help" data-tip="Set the interface language" aria-label="Set the interface language">?</span>
         </div>
-        <label class="select" data-i18n-attr="aria-label:settings.lang.label" aria-label="Language">
-          <select id="lang-select">
-            <option value="system" data-i18n="settings.lang.system">System</option>
-            <option value="en">English</option>
-            <option value="zh-CN">简体中文</option>
-          </select>
-        </label>
+        <div id="lang-select" class="select align-right" data-i18n-attr="aria-label:settings.lang.label" aria-label="Language">
+          <button type="button" class="trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="selected-label"></span>
+            <svg viewBox="0 0 16 16" aria-hidden="true" class="icon"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          </button>
+          <ul class="menu" role="listbox">
+            <li class="option" role="option" data-value="system" data-i18n="settings.lang.system">System</li>
+            <li class="option" role="option" data-value="en">English</li>
+            <li class="option" role="option" data-value="zh-CN">简体中文</li>
+          </ul>
+        </div>
       </div>
     </div>
 
