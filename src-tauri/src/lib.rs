@@ -13,9 +13,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             crate::commands::http::start_download,
             crate::commands::core::probe_url,
-            crate::commands::core::cancel_download,
             crate::commands::core::delete_download,
-            crate::commands::http::resume_download,
             crate::commands::manic::start_download_manic,
         ])
         .run(tauri::generate_context!())

@@ -80,6 +80,8 @@
 .menu .option{display:block; list-style:none; padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--fx-text)}
 .menu .option:hover{background:var(--fx-hover)}
 .menu .option[aria-selected="true"]{background:var(--fx-active)}
+/* Add a little gap between dropdown options */
+.menu .option + .option{ margin-top:4px; }
 /* Disabled option */
 .menu .option[aria-disabled="true"]{
   opacity:0.5;
@@ -103,6 +105,31 @@
 
 /* Top-layer portal menu */
 .menu.portal{ position: fixed !important; top:auto; left:auto; right:auto; bottom:auto; z-index: 20000 !important; opacity:1 !important; transform:none !important; pointer-events:auto !important; }
+
+/* Compact Win11-like context menu (separate from dropdown .menu) */
+.ctx-menu{ 
+  position:fixed; 
+  background:var(--fx-surface-strong);
+  border:1px solid var(--fx-border);
+  border-radius:12px; 
+  box-shadow:var(--fx-shadow);
+  padding:4px; 
+  min-width:200px; 
+  z-index:20000; 
+}
+.ctx-menu.portal{ position: fixed !important; }
+.ctx-menu .ctx-item{ 
+  display:flex; align-items:center; gap:8px; 
+  padding:6px 10px; 
+  height:30px; 
+  border-radius:8px; 
+  cursor:pointer; 
+  color:var(--fx-text);
+  white-space:nowrap;
+}
+.ctx-menu .ctx-item:hover{ background:var(--fx-hover); }
+.ctx-menu .ctx-item[aria-disabled="true"]{ opacity:0.5; pointer-events:none; cursor:default; }
+.ctx-menu .separator{ height:1px; margin:4px; background:var(--fx-border); border-radius:1px; }
 
 /* 模态弹窗 */
 .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:1000}

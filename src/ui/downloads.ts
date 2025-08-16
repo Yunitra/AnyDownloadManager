@@ -8,6 +8,7 @@ interface StartedPayload {
   url: string;
   file_name: string;
   total: number | null;
+  dest_dir?: string; // provided by backend; optional for backward compatibility
 }
 interface ProgressPayload {
   id: string;
@@ -17,7 +18,6 @@ interface ProgressPayload {
 }
 interface CompletedPayload { id: string; path: string }
 interface FailedPayload { id: string; error: string }
-interface CanceledPayload { id: string }
 
 type RowRefs = {
   row: HTMLDivElement;
@@ -29,12 +29,56 @@ type RowRefs = {
   bar?: HTMLDivElement; // progress bar element
   lastSpeed?: number;
   finished?: boolean;
-  paused?: boolean;
   id: string;
-  path?: string;
+  path?: string; // full file path to final file
 };
 
 const rows = new Map<string, RowRefs>();
+const HISTORY_KEY = 'adm.history';
+
+type HistoryItem = {
+  id: string;
+  url: string;
+  file_name: string;
+  total: number | null;
+  path?: string;
+  status: 'downloading' | 'finished' | 'failed' | 'canceled';
+  created_at: number; // epoch ms
+};
+
+function safeJoin(dir: string | undefined, file: string): string | undefined {
+  if (!dir) return undefined;
+  const hasBack = /[\\/]$/.test(dir);
+  const sep = dir.includes('\\') ? '\\' : '/';
+  return hasBack ? `${dir}${file}` : `${dir}${sep}${file}`;
+}
+
+function loadHistory(): HistoryItem[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as HistoryItem[];
+    if (Array.isArray(arr)) return arr;
+  } catch {}
+  return [];
+}
+
+function saveHistory(items: HistoryItem[]): void {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items)); } catch {}
+}
+
+function upsertHistory(item: HistoryItem): void {
+  const list = loadHistory();
+  const idx = list.findIndex(i => i.id === item.id);
+  if (idx >= 0) list[idx] = { ...list[idx], ...item };
+  else list.unshift(item);
+  saveHistory(list);
+}
+
+function removeFromHistory(id: string): void {
+  const list = loadHistory().filter(i => i.id !== id);
+  saveHistory(list);
+}
 let cleanupDemoDone = false;
 
 function formatBytes(bytes: number): string {
@@ -69,6 +113,8 @@ function createRow(started: StartedPayload): RowRefs {
   const colName = document.createElement('div');
   colName.className = 'name';
   colName.textContent = started.file_name || started.url;
+  // Tooltip for full name
+  colName.title = started.file_name || started.url;
 
   const colSize = document.createElement('div');
   colSize.textContent = started.total && started.total > 0 ? formatBytes(started.total) : '—';
@@ -116,6 +162,9 @@ function createRow(started: StartedPayload): RowRefs {
   applyI18n(row);
 
   const refs: RowRefs = { row, name: colName, size: colSize, status: colStatus, speed: colSpeed, date: colDate, bar, id: started.id };
+  // If backend provided dest_dir, build full path early so context menu "Open folder" can work before completion
+  const earlyPath = safeJoin(started.dest_dir, started.file_name);
+  if (earlyPath) refs.path = earlyPath;
   // context menu on right click
   row.addEventListener('contextmenu', (e) => {
     e.preventDefault();
@@ -129,7 +178,6 @@ function createRow(started: StartedPayload): RowRefs {
 function updateProgress(payload: ProgressPayload) {
   const refs = rows.get(payload.id);
   if (!refs) return;
-  if (refs.paused) return; // don't update UI while paused
   // speed
   refs.lastSpeed = payload.speed;
   refs.speed.textContent = formatSpeed(payload.speed);
@@ -157,9 +205,19 @@ function markCompleted(id: string, path: string) {
   refs.speed.textContent = '—';
   refs.lastSpeed = 0;
   refs.finished = true;
-  refs.paused = false;
   refs.path = path;
   updateStatusBar();
+  // persist
+  const existing = loadHistory().find(h => h.id === id);
+  upsertHistory({
+    id,
+    url: existing?.url || '',
+    file_name: existing?.file_name || refs.name.textContent || 'download.bin',
+    total: existing?.total ?? null,
+    path,
+    status: 'finished',
+    created_at: existing?.created_at || Date.now(),
+  });
 }
 
 function markFailed(id: string, _error: string) {
@@ -170,18 +228,50 @@ function markFailed(id: string, _error: string) {
   // keep size as-is
   refs.lastSpeed = 0;
   refs.finished = true;
-  refs.paused = false;
   updateStatusBar();
+  // persist
+  const existing = loadHistory().find(h => h.id === id);
+  upsertHistory({
+    id,
+    url: existing?.url || '',
+    file_name: existing?.file_name || refs.name.textContent || 'download.bin',
+    total: existing?.total ?? null,
+    path: existing?.path || refs.path,
+    status: 'failed',
+    created_at: existing?.created_at || Date.now(),
+  });
 }
 
 let unlistenFns: UnlistenFn[] = [];
 
 export async function initDownloadsUI() {
+  // Render finished history first
+  const hist = loadHistory().filter(h => h.status === 'finished' || h.status === 'failed');
+  hist.forEach((h) => {
+    const refs = createRow({ id: h.id, url: h.url, file_name: h.file_name, total: h.total, dest_dir: h.path ? undefined : undefined });
+    rows.set(h.id, refs);
+    if (h.status === 'finished' && h.path) {
+      markCompleted(h.id, h.path);
+    } else if (h.status === 'failed') {
+      markFailed(h.id, '');
+    }
+  });
+
   // started
   unlistenFns.push(await listen<StartedPayload>('download_started', (e) => {
     const refs = createRow(e.payload);
     rows.set(e.payload.id, refs);
     updateStatusBar();
+    // persist basic info
+    upsertHistory({
+      id: e.payload.id,
+      url: e.payload.url,
+      file_name: e.payload.file_name,
+      total: e.payload.total,
+      path: safeJoin(e.payload.dest_dir, e.payload.file_name),
+      status: 'downloading',
+      created_at: Date.now(),
+    });
   }));
   // progress
   unlistenFns.push(await listen<ProgressPayload>('download_progress', (e) => updateProgress(e.payload)));
@@ -189,16 +279,7 @@ export async function initDownloadsUI() {
   unlistenFns.push(await listen<CompletedPayload>('download_completed', (e) => markCompleted(e.payload.id, e.payload.path)));
   // failed
   unlistenFns.push(await listen<FailedPayload>('download_failed', (e) => markFailed(e.payload.id, e.payload.error)));
-  // canceled -> mark as paused in UI
-  unlistenFns.push(await listen<CanceledPayload>('download_canceled', (e) => {
-    const refs = rows.get(e.payload.id);
-    if (!refs) return;
-    refs.paused = true;
-    refs.speed.textContent = '—';
-    refs.lastSpeed = 0;
-    refs.status.innerHTML = `<div class="badge" data-i18n="table.status.paused">${t('table.status.paused')}</div>`;
-    updateStatusBar();
-  }));
+  // Note: canceled events are ignored in UI (no pause feature)
   // initialize status bar to current state
   updateStatusBar();
 }
@@ -215,7 +296,7 @@ function updateStatusBar() {
   let active = 0;
   let totalSpeed = 0;
   rows.forEach((r) => {
-    const isActive = !r.finished && !r.paused && !!(r.lastSpeed && r.lastSpeed > 0);
+    const isActive = !r.finished && !!(r.lastSpeed && r.lastSpeed > 0);
     if (isActive) active++;
     if (r.lastSpeed) totalSpeed += r.lastSpeed;
   });
@@ -230,20 +311,19 @@ function updateStatusBar() {
 }
 
 function closeAnyMenu() {
-  document.querySelectorAll('.menu.portal[data-kind="context"]').forEach((el) => el.remove());
+  document.querySelectorAll('.ctx-menu').forEach((el) => el.remove());
 }
 
 function showContextMenu(x: number, y: number, refs: RowRefs) {
   closeAnyMenu();
   const menu = document.createElement('div');
-  menu.className = 'menu portal';
-  menu.setAttribute('data-kind', 'context');
+  menu.className = 'ctx-menu portal';
   menu.style.left = `${x}px`;
   menu.style.top = `${y}px`;
 
   const addOpt = (label: string, onClick: () => void, enabled: boolean) => {
     const opt = document.createElement('div');
-    opt.className = 'option';
+    opt.className = 'ctx-item';
     opt.textContent = label;
     if (!enabled) opt.setAttribute('aria-disabled', 'true');
     else opt.addEventListener('click', () => { onClick(); closeAnyMenu(); });
@@ -252,39 +332,16 @@ function showContextMenu(x: number, y: number, refs: RowRefs) {
 
   const canOpen = !!refs.path && !!refs.finished;
   const canReveal = !!refs.path;
-  const canPause = !Boolean(refs.finished) && !Boolean(refs.paused) && (refs.lastSpeed || 0) > 0;
-  const canResume = !Boolean(refs.finished) && Boolean(refs.paused);
 
   addOpt(t('ctx.open'), () => { if (refs.path) void openPath(refs.path); }, canOpen);
   addOpt(t('ctx.openFolder'), () => { if (refs.path) void revealItemInDir(refs.path); }, canReveal);
-  addOpt(t('ctx.resume'), () => {
-    // request backend resume; only change UI on success
-    invoke('resume_download', { id: refs.id, threads: 4 })
-      .then(() => {
-        refs.paused = false;
-        if (refs.bar) {
-          // keep progress bar
-        } else if (!refs.finished) {
-          refs.status.innerHTML = `<div class="badge" data-i18n="table.status.downloading">${t('table.status.downloading')}</div>`;
-        }
-        updateStatusBar();
-      })
-      .catch((err) => {
-        console.error(err);
-        // keep paused state
-      });
-  }, canResume);
-  addOpt(t('ctx.pause'), () => {
-    // request backend cancel to actually stop bandwidth
-    void invoke('cancel_download', { id: refs.id }).catch(console.error);
-    // UI will be updated via download_canceled listener
-  }, canPause);
   addOpt(t('ctx.delete'), () => {
     // delete backend (also cancels if running) then remove from UI
     void invoke('delete_download', { id: refs.id }).catch(console.error);
     refs.row.remove();
     rows.delete(refs.id);
     updateStatusBar();
+    removeFromHistory(refs.id);
   }, true);
 
   document.body.appendChild(menu);

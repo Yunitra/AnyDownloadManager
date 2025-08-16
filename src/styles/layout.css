@@ -28,10 +28,10 @@
 .command-bar .spacer{flex:1}
 
 .table{flex:1; min-height:0; display:flex; flex-direction:column; border:1px solid var(--fx-border); border-radius:var(--fx-radius); overflow:hidden; background:var(--fx-surface-strong); box-shadow:var(--fx-shadow)}
-.table .thead{display:grid; grid-template-columns:1fr 120px 140px 120px 160px; gap:8px; padding:12px; background:linear-gradient(180deg, color-mix(in srgb, var(--fx-surface-strong) 85%, var(--fx-bg) 15%), var(--fx-surface)); border-bottom:1px solid var(--fx-border)}
-.table .row{display:grid; grid-template-columns:1fr 120px 140px 120px 160px; gap:8px; padding:12px; border-bottom:1px solid var(--fx-border); align-items:center; transition:background var(--fx-transition)}
+.table .thead{display:grid; grid-template-columns:minmax(0,1fr) 180px 140px 120px 160px; gap:8px; padding:12px; background:linear-gradient(180deg, color-mix(in srgb, var(--fx-surface-strong) 85%, var(--fx-bg) 15%), var(--fx-surface)); border-bottom:1px solid var(--fx-border)}
+.table .row{display:grid; grid-template-columns:minmax(0,1fr) 180px 140px 120px 160px; gap:8px; padding:12px; border-bottom:1px solid var(--fx-border); align-items:center; transition:background var(--fx-transition); height:44px;}
 .table .row:hover{background:color-mix(in srgb, var(--fx-text) 3%, transparent)}
-.table .name{display:flex; align-items:center; gap:10px}
+.table .name{display:flex; align-items:center; gap:10px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
 .progress{height:6px; border-radius:999px; background:var(--fx-track); overflow:hidden}
 .progress .bar{height:100%; width:40%; background:linear-gradient(90deg,var(--fx-accent),var(--fx-accent-weak)); border-radius:999px; transition:width var(--fx-transition)}
 
