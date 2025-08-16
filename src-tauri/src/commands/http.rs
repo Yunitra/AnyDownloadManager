@@ -2,16 +2,18 @@ use std::{
     fs::OpenOptions,
     io::{Seek, SeekFrom, Write},
     path::PathBuf,
-    sync::{Arc},
+    sync::Arc,
 };
 
 use futures_util::StreamExt;
-use reqwest::header::{ACCEPT_RANGES, CONTENT_LENGTH, RANGE, CONTENT_DISPOSITION, CONTENT_RANGE};
+use reqwest::header::{ACCEPT_RANGES, CONTENT_DISPOSITION, CONTENT_LENGTH, CONTENT_RANGE, RANGE};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tauri::{Emitter, State};
 use tokio::time::{self, Duration, Instant};
 
-use crate::payloads::{CanceledPayload, CompletedPayload, FailedPayload, ProgressPayload, StartedPayload};
+use crate::payloads::{
+    CanceledPayload, CompletedPayload, FailedPayload, ProgressPayload, StartedPayload,
+};
 use crate::state::{AppState, DownloadMeta};
 
 // --- Helpers: filename parsing & percent-decoding ---
@@ -36,7 +38,11 @@ fn percent_decode_simple(s: &str) -> String {
                 continue;
             }
         }
-        if bytes[i] == b'+' { out.push(b' '); i += 1; continue; }
+        if bytes[i] == b'+' {
+            out.push(b' ');
+            i += 1;
+            continue;
+        }
         out.push(bytes[i]);
         i += 1;
     }
@@ -52,7 +58,8 @@ fn filename_from_cd(cd: &str) -> Option<String> {
         if let Some(rest) = p.strip_prefix("filename*=") {
             // e.g., UTF-8''%E4%B8%AD%E6%96%87.zip
             let v = rest.trim_matches('"');
-            if let Some(idx) = v.find("'')") { // very rare malformed case
+            if let Some(idx) = v.find("'')") {
+                // very rare malformed case
                 let (_charset, enc) = v.split_at(idx + 3);
                 filename_star = Some(percent_decode_simple(enc));
             } else if let Some(pos) = v.find("''") {
@@ -63,13 +70,14 @@ fn filename_from_cd(cd: &str) -> Option<String> {
             }
         } else if let Some(rest) = p.strip_prefix("filename=") {
             let mut v = rest.trim();
-            if v.starts_with('"') && v.ends_with('"') && v.len() >= 2 { v = &v[1..v.len()-1]; }
+            if v.starts_with('"') && v.ends_with('"') && v.len() >= 2 {
+                v = &v[1..v.len() - 1];
+            }
             filename = Some(v.to_string());
         }
     }
     filename_star.or(filename)
 }
-
 
 #[tauri::command]
 pub async fn start_download(
@@ -102,7 +110,11 @@ pub async fn start_download(
         .contains("bytes");
 
     // Prefer server-provided filename via Content-Disposition
-    let mut decided_name = if let Some(cd) = head.headers().get(CONTENT_DISPOSITION).and_then(|v| v.to_str().ok()) {
+    let mut decided_name = if let Some(cd) = head
+        .headers()
+        .get(CONTENT_DISPOSITION)
+        .and_then(|v| v.to_str().ok())
+    {
         filename_from_cd(cd).unwrap_or_else(|| {
             let mut name = url
                 .split('/')
@@ -112,7 +124,9 @@ pub async fn start_download(
                 .next()
                 .unwrap_or("download.bin")
                 .to_string();
-            if name.is_empty() || name == "/" { name = "download.bin".into(); }
+            if name.is_empty() || name == "/" {
+                name = "download.bin".into();
+            }
             name
         })
     } else {
@@ -124,25 +138,48 @@ pub async fn start_download(
             .next()
             .unwrap_or("download.bin")
             .to_string();
-        if name.is_empty() || name == "/" { name = "download.bin".into(); }
+        if name.is_empty() || name == "/" {
+            name = "download.bin".into();
+        }
         name
     };
-    if decided_name.is_empty() { decided_name = "download.bin".into(); }
+    if decided_name.is_empty() {
+        decided_name = "download.bin".into();
+    }
 
     // If no extension or looks like hashed name, try a quick Range-GET to read Content-Disposition
-    if !decided_name.contains('.') || decided_name == "download.bin" || len_opt.is_none() || !accept_ranges {
+    if !decided_name.contains('.')
+        || decided_name == "download.bin"
+        || len_opt.is_none()
+        || !accept_ranges
+    {
         if let Ok(probe) = client.get(&url).header(RANGE, "bytes=0-0").send().await {
-            if let Some(cd) = probe.headers().get(CONTENT_DISPOSITION).and_then(|v| v.to_str().ok()) {
-                if let Some(name) = filename_from_cd(cd) { decided_name = name; }
+            if let Some(cd) = probe
+                .headers()
+                .get(CONTENT_DISPOSITION)
+                .and_then(|v| v.to_str().ok())
+            {
+                if let Some(name) = filename_from_cd(cd) {
+                    decided_name = name;
+                }
             }
             // If total unknown, try Content-Range: bytes 0-0/12345
             if len_opt.is_none() {
-                if let Some(total_s) = probe.headers().get(CONTENT_RANGE).and_then(|v| v.to_str().ok()).and_then(|s| s.split('/').nth(1)) {
-                    if let Ok(n) = total_s.parse::<u64>() { len_opt = Some(n); }
+                if let Some(total_s) = probe
+                    .headers()
+                    .get(CONTENT_RANGE)
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|s| s.split('/').nth(1))
+                {
+                    if let Ok(n) = total_s.parse::<u64>() {
+                        len_opt = Some(n);
+                    }
                 }
             }
             // Consider 206 or presence of Content-Range as accept-ranges support
-            if probe.status() == reqwest::StatusCode::PARTIAL_CONTENT || probe.headers().get(CONTENT_RANGE).is_some() {
+            if probe.status() == reqwest::StatusCode::PARTIAL_CONTENT
+                || probe.headers().get(CONTENT_RANGE).is_some()
+            {
                 accept_ranges = true;
             }
         }
@@ -162,20 +199,43 @@ pub async fn start_download(
     let mut temp = dest.clone();
     temp.set_extension("part");
 
-    let id = format!("dl-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
+    let id = format!(
+        "dl-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
 
     let started = StartedPayload {
         id: id.clone(),
         url: url.clone(),
-        file_name: dest.file_name().and_then(|s| s.to_str()).unwrap_or("download.bin").to_string(),
-        dest_dir: dest.parent().unwrap_or(std::path::Path::new("")).to_string_lossy().to_string(),
+        file_name: dest
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("download.bin")
+            .to_string(),
+        dest_dir: dest
+            .parent()
+            .unwrap_or(std::path::Path::new(""))
+            .to_string_lossy()
+            .to_string(),
         total: len_opt,
     };
     let _ = app.emit("download_started", started);
 
     {
         let mut metas = state.metas.lock().map_err(|_| "State poisoned")?;
-        metas.insert(id.clone(), DownloadMeta { url: url.clone(), dest: dest.clone(), temp: temp.clone(), total: len_opt, accept_ranges });
+        metas.insert(
+            id.clone(),
+            DownloadMeta {
+                url: url.clone(),
+                dest: dest.clone(),
+                temp: temp.clone(),
+                total: len_opt,
+                accept_ranges,
+            },
+        );
     }
     let cancel_flag = {
         let mut map = state.cancels.lock().map_err(|_| "State poisoned")?;
@@ -192,7 +252,10 @@ pub async fn start_download(
             .await
             .map_err(|e| format!("GET error: {}", e))?;
         if !resp.status().is_success() {
-            let payload = FailedPayload { id: id.clone(), error: format!("HTTP status {}", resp.status()) };
+            let payload = FailedPayload {
+                id: id.clone(),
+                error: format!("HTTP status {}", resp.status()),
+            };
             let _ = app.emit("download_failed", payload);
             return Err(format!("Unexpected status: {}", resp.status()));
         }
@@ -208,7 +271,9 @@ pub async fn start_download(
         let mut last_instant = Instant::now();
         let mut last_bytes = 0u64;
         while let Some(chunk) = stream.next().await {
-            if cancel_flag.load(Ordering::Relaxed) { break; }
+            if cancel_flag.load(Ordering::Relaxed) {
+                break;
+            }
             let bytes = chunk.map_err(|e| format!("Read stream error: {}", e))?;
             file.write_all(&bytes)
                 .map_err(|e| format!("Write error: {}", e))?;
@@ -218,7 +283,12 @@ pub async fn start_download(
                 let delta = received_all.saturating_sub(last_bytes);
                 let elapsed = now.duration_since(last_instant).as_secs_f64().max(0.001);
                 let speed = (delta as f64 / elapsed) as u64;
-                let payload = ProgressPayload { id: id.clone(), received: received_all, total, speed };
+                let payload = ProgressPayload {
+                    id: id.clone(),
+                    received: received_all,
+                    total,
+                    speed,
+                };
                 let _ = app.emit("download_progress", payload);
                 last_instant = now;
                 last_bytes = received_all;
@@ -226,32 +296,71 @@ pub async fn start_download(
         }
         if cancel_flag.load(Ordering::Relaxed) {
             let _ = app.emit("download_canceled", CanceledPayload { id: id.clone() });
-            let _ = state.cancels.lock().map_err(|_| "State poisoned")?.remove(&id);
+            let _ = state
+                .cancels
+                .lock()
+                .map_err(|_| "State poisoned")?
+                .remove(&id);
             return Err("canceled".into());
         }
         if received_all == 0 {
-            let payload = FailedPayload { id: id.clone(), error: "no data received".into() };
+            let payload = FailedPayload {
+                id: id.clone(),
+                error: "no data received".into(),
+            };
             let _ = app.emit("download_failed", payload);
-            let _ = state.cancels.lock().map_err(|_| "State poisoned")?.remove(&id);
-            let _ = state.metas.lock().map_err(|_| "State poisoned")?.remove(&id);
+            let _ = state
+                .cancels
+                .lock()
+                .map_err(|_| "State poisoned")?
+                .remove(&id);
+            let _ = state
+                .metas
+                .lock()
+                .map_err(|_| "State poisoned")?
+                .remove(&id);
             let _ = std::fs::remove_file(&temp);
             return Err("empty content".into());
         }
-        if dest.exists() { let _ = std::fs::remove_file(&dest); }
+        if dest.exists() {
+            let _ = std::fs::remove_file(&dest);
+        }
         std::fs::rename(&temp, &dest).map_err(|e| format!("Rename error: {}", e))?;
-        let complete = CompletedPayload { id: id.clone(), path: dest.to_string_lossy().to_string() };
+        let complete = CompletedPayload {
+            id: id.clone(),
+            path: dest.to_string_lossy().to_string(),
+        };
         let _ = app.emit("download_completed", complete);
-        let _ = state.cancels.lock().map_err(|_| "State poisoned")?.remove(&id);
-        let _ = state.metas.lock().map_err(|_| "State poisoned")?.remove(&id);
+        let _ = state
+            .cancels
+            .lock()
+            .map_err(|_| "State poisoned")?
+            .remove(&id);
+        let _ = state
+            .metas
+            .lock()
+            .map_err(|_| "State poisoned")?
+            .remove(&id);
         return Ok(dest.to_string_lossy().to_string());
     }
 
     let total = len_opt.ok_or_else(|| "Server didn't provide content length".to_string())?;
     if total == 0 {
-        let payload = FailedPayload { id: id.clone(), error: "empty content (total size is 0)".into() };
+        let payload = FailedPayload {
+            id: id.clone(),
+            error: "empty content (total size is 0)".into(),
+        };
         let _ = app.emit("download_failed", payload);
-        let _ = state.cancels.lock().map_err(|_| "State poisoned")?.remove(&id);
-        let _ = state.metas.lock().map_err(|_| "State poisoned")?.remove(&id);
+        let _ = state
+            .cancels
+            .lock()
+            .map_err(|_| "State poisoned")?
+            .remove(&id);
+        let _ = state
+            .metas
+            .lock()
+            .map_err(|_| "State poisoned")?
+            .remove(&id);
         let _ = std::fs::remove_file(&temp);
         return Err("empty content".into());
     }
@@ -283,17 +392,26 @@ pub async fn start_download(
             let delta = cur.saturating_sub(last_bytes);
             let elapsed = now.duration_since(last_instant).as_secs_f64().max(0.001);
             let speed = (delta as f64 / elapsed) as u64;
-            let payload = ProgressPayload { id: id_for_ticker.clone(), received: cur, total, speed };
+            let payload = ProgressPayload {
+                id: id_for_ticker.clone(),
+                received: cur,
+                total,
+                speed,
+            };
             let _ = app_for_ticker.emit("download_progress", payload);
             last_bytes = cur;
             last_instant = now;
-            if cur >= total || cancel_for_ticker.load(Ordering::Relaxed) { break; }
+            if cur >= total || cancel_for_ticker.load(Ordering::Relaxed) {
+                break;
+            }
         }
     });
     let mut tasks = Vec::new();
     for i in 0..threads {
         let start = i * chunk_size;
-        if start >= total { break; }
+        if start >= total {
+            break;
+        }
         let end = (start + chunk_size - 1).min(total - 1);
         let url_cloned = url.clone();
         let temp_path = temp.clone();
@@ -308,7 +426,8 @@ pub async fn start_download(
                 .send()
                 .await
                 .map_err(|e| format!("Range GET error: {}", e))?;
-            if !resp.status().is_success() && resp.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+            if !resp.status().is_success() && resp.status() != reqwest::StatusCode::PARTIAL_CONTENT
+            {
                 return Err(format!("Unexpected status: {}", resp.status()));
             }
 
@@ -321,7 +440,9 @@ pub async fn start_download(
 
             let mut stream = resp.bytes_stream();
             while let Some(chunk) = stream.next().await {
-                if cancel_clone.load(Ordering::Relaxed) { break; }
+                if cancel_clone.load(Ordering::Relaxed) {
+                    break;
+                }
                 let bytes = chunk.map_err(|e| format!("Read stream error: {}", e))?;
                 f.write_all(&bytes)
                     .map_err(|e| format!("Write error: {}", e))?;
@@ -342,27 +463,50 @@ pub async fn start_download(
 
     if cancel_flag.load(Ordering::Relaxed) {
         let _ = app.emit("download_canceled", CanceledPayload { id: id.clone() });
-        let _ = state.cancels.lock().map_err(|_| "State poisoned")?.remove(&id);
+        let _ = state
+            .cancels
+            .lock()
+            .map_err(|_| "State poisoned")?
+            .remove(&id);
         return Err("canceled".into());
     }
 
     if let Some(err) = any_err {
-        let payload = FailedPayload { id: id.clone(), error: err.clone() };
+        let payload = FailedPayload {
+            id: id.clone(),
+            error: err.clone(),
+        };
         let _ = app.emit("download_failed", payload);
         return Err(err);
     }
     // Validate completeness
     let got = downloaded.load(Ordering::Relaxed);
     if got < total {
-        let payload = FailedPayload { id: id.clone(), error: format!("incomplete: {} < {}", got, total) };
+        let payload = FailedPayload {
+            id: id.clone(),
+            error: format!("incomplete: {} < {}", got, total),
+        };
         let _ = app.emit("download_failed", payload);
         return Err("incomplete".into());
     }
-    if dest.exists() { let _ = std::fs::remove_file(&dest); }
+    if dest.exists() {
+        let _ = std::fs::remove_file(&dest);
+    }
     std::fs::rename(&temp, &dest).map_err(|e| format!("Rename error: {}", e))?;
-    let complete = CompletedPayload { id: id.clone(), path: dest.to_string_lossy().to_string() };
+    let complete = CompletedPayload {
+        id: id.clone(),
+        path: dest.to_string_lossy().to_string(),
+    };
     let _ = app.emit("download_completed", complete);
-    let _ = state.cancels.lock().map_err(|_| "State poisoned")?.remove(&id);
-    let _ = state.metas.lock().map_err(|_| "State poisoned")?.remove(&id);
+    let _ = state
+        .cancels
+        .lock()
+        .map_err(|_| "State poisoned")?
+        .remove(&id);
+    let _ = state
+        .metas
+        .lock()
+        .map_err(|_| "State poisoned")?
+        .remove(&id);
     Ok(dest.to_string_lossy().to_string())
 }

@@ -1,13 +1,15 @@
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { emitTo } from '@tauri-apps/api/event';
 
 function isTauriEnv(): boolean {
   return typeof (window as any).__TAURI__ !== 'undefined' || typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
 }
 
-export async function openAddWindow(): Promise<void> {
+export async function openAddWindow(initialUrl?: string): Promise<void> {
   if (!isTauriEnv()) {
-    window.open('add.html', '_blank');
+    const url = initialUrl ? `add.html?url=${encodeURIComponent(initialUrl)}` : 'add.html';
+    window.open(url, '_blank');
     return;
   }
 
@@ -16,6 +18,9 @@ export async function openAddWindow(): Promise<void> {
     try { await (existing as any).unminimize?.(); } catch {}
     try { await existing.show(); } catch {}
     try { await existing.setFocus(); } catch {}
+    if (initialUrl) {
+      try { await emitTo('add', 'adm-prefill-url', initialUrl); } catch {}
+    }
     return;
   }
 
@@ -49,7 +54,7 @@ export async function openAddWindow(): Promise<void> {
 
   // @ts-ignore
   const win = new WebviewWindow('add', {
-    url: 'add.html',
+    url: initialUrl ? `add.html?url=${encodeURIComponent(initialUrl)}` : 'add.html',
     title: '添加下载',
     width: targetWidth,
     height: targetHeight,

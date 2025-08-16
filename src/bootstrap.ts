@@ -10,6 +10,9 @@ import { applyThemeToDocument, getSavedTheme } from './ui/settings';
 import { initI18n } from './ui/i18n';
 import { openAddWindow } from './ui/addWindow';
 import { initDownloadsUI } from './ui/downloads';
+// Deep link listener
+import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
+import { listen } from '@tauri-apps/api/event';
 
 (function mount(){
   const app = document.createElement('div');
@@ -48,4 +51,33 @@ import { initDownloadsUI } from './ui/downloads';
   document.addEventListener('contextmenu', (e) => {
     e.preventDefault();
   }, { capture: true });
+
+  // 监听系统深链，例如 adm://add?url=...
+  try {
+    void onOpenUrl(async (urls: string[]) => {
+      // urls: string[]
+      for (const u of urls) {
+        try {
+          const parsed = new URL(u);
+          if (parsed.protocol === 'adm:' && parsed.host === 'add') {
+            const link = parsed.searchParams.get('url') || '';
+            if (link) {
+              await openAddWindow(link);
+              break;
+            }
+          }
+        } catch {}
+      }
+    });
+  } catch {}
+
+  // 监听本地 HTTP Bridge 事件，从浏览器扩展无提示地接收 URL
+  try {
+    void listen<string>('adm-bridge-add-url', async (event) => {
+      const link = event.payload;
+      if (link) {
+        await openAddWindow(link);
+      }
+    });
+  } catch {}
 })();

@@ -1,17 +1,14 @@
-use std::{
-    fs::OpenOptions,
-    io::Write,
-    path::PathBuf,
-    sync::Arc,
-};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::{fs::OpenOptions, io::Write, path::PathBuf, sync::Arc};
 
 use indicatif::{ProgressBar, ProgressDrawTarget};
 use manic::Downloader as ManicDownloader;
 use tauri::{Emitter, State};
 use tokio::time::{self, Duration, Instant};
 
-use crate::payloads::{CanceledPayload, CompletedPayload, FailedPayload, ProgressPayload, StartedPayload};
+use crate::payloads::{
+    CanceledPayload, CompletedPayload, FailedPayload, ProgressPayload, StartedPayload,
+};
 use crate::state::{AppState, DownloadMeta};
 
 #[tauri::command]
@@ -116,13 +113,21 @@ pub async fn start_download_manic(
             let delta = cur.saturating_sub(last_bytes);
             let elapsed = now.duration_since(last_instant).as_secs_f64().max(0.001);
             let speed = (delta as f64 / elapsed) as u64;
-            let payload = ProgressPayload { id: id_for_ticker.clone(), received: cur, total, speed };
+            let payload = ProgressPayload {
+                id: id_for_ticker.clone(),
+                received: cur,
+                total,
+                speed,
+            };
             let _ = app_for_ticker.emit("download_progress", payload);
             last_bytes = cur;
             last_instant = now;
             if done_for_ticker.load(Ordering::Relaxed)
                 || cancel_for_ticker.load(Ordering::Relaxed)
-                || cur >= total { break; }
+                || cur >= total
+            {
+                break;
+            }
         }
     });
 
@@ -135,7 +140,10 @@ pub async fn start_download_manic(
 
     // Download + write synchronously to avoid detached background IO
     let download_future = async {
-        let data = dl.download().await.map_err(|e| format!("manic error: {}", e))?;
+        let data = dl
+            .download()
+            .await
+            .map_err(|e| format!("manic error: {}", e))?;
         let bytes = data.to_vec().await;
         let mut f = OpenOptions::new()
             .create(true)
@@ -143,9 +151,12 @@ pub async fn start_download_manic(
             .truncate(true)
             .open(&temp)
             .map_err(|e| format!("Open file error: {}", e))?;
-        f.write_all(&bytes).map_err(|e| format!("Write error: {}", e))?;
+        f.write_all(&bytes)
+            .map_err(|e| format!("Write error: {}", e))?;
         f.flush().map_err(|e| format!("Flush error: {}", e))?;
-        if dest.exists() { let _ = std::fs::remove_file(&dest); }
+        if dest.exists() {
+            let _ = std::fs::remove_file(&dest);
+        }
         std::fs::rename(&temp, &dest).map_err(|e| format!("Rename error: {}", e))?;
         Ok::<(), String>(())
     };

@@ -31,5 +31,12 @@
       "icons/icon.png",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["adm"]
+      }
+    }
   }
 }

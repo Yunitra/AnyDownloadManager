@@ -2,7 +2,11 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main", "settings", "add"],
+  "windows": [
+    "main",
+    "settings",
+    "add"
+  ],
   "permissions": [
     "core:default",
     "core:event:allow-listen",
@@ -17,6 +21,7 @@
     "core:window:allow-show",
     "core:window:allow-unminimize",
     "core:window:allow-set-focus",
-    "core:webview:allow-create-webview-window"
+    "core:webview:allow-create-webview-window",
+    "deep-link:default"
   ]
 }

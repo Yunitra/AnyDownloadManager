@@ -9,7 +9,10 @@ pub struct AppState {
 
 impl Default for AppState {
     fn default() -> Self {
-        Self { cancels: Mutex::new(HashMap::new()), metas: Mutex::new(HashMap::new()) }
+        Self {
+            cancels: Mutex::new(HashMap::new()),
+            metas: Mutex::new(HashMap::new()),
+        }
     }
 }
 

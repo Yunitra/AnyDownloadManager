@@ -1,13 +1,13 @@
 // New modularized structure
-mod state;
-mod payloads;
-mod util;
 pub mod commands;
-
+mod payloads;
+mod state;
+mod util;
+mod server;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(crate::state::AppState::default())
         .invoke_handler(tauri::generate_handler![
@@ -15,7 +15,28 @@ pub fn run() {
             crate::commands::core::probe_url,
             crate::commands::core::delete_download,
             crate::commands::manic::start_download_manic,
-        ])
+        ]);
+
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|_app, argv, _cwd| {
+            println!("a new app instance was opened with {argv:?} and the deep link event was already triggered");
+            // when defining deep link schemes at runtime, also check `argv` here
+        }));
+    }
+
+    builder = builder.plugin(tauri_plugin_deep_link::init());
+
+    // Start localhost HTTP bridge to receive /add?url=... from the browser extension
+    builder = builder.setup(|app| {
+        let handle = app.handle().clone();
+        std::thread::spawn(move || {
+            crate::server::start_http_bridge(handle);
+        });
+        Ok(())
+    });
+
+    builder
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

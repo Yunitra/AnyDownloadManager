@@ -6,6 +6,7 @@ import { initI18n } from './ui/i18n';
 import { applyThemeToDocument, getSavedTheme } from './ui/settings';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
 
 function formatBytes(bytes?: number | null): string {
   if (!Number.isFinite(bytes as number) || (bytes as number) <= 0) return '—';
@@ -53,6 +54,27 @@ function joinPath(dir: string, sub: string): string {
   const closeWindow = async () => {
     try { await getCurrentWindow().close(); } catch {}
   };
+
+  // If launched with ?url=... prefill and probe
+  try {
+    const initial = new URLSearchParams(location.search).get('url');
+    if (initial) {
+      urlInput.value = initial;
+      // defer to ensure DOM is ready
+      setTimeout(() => { void probeAndFill(); }, 0);
+    }
+  } catch {}
+
+  // Listen for prefill event from main window
+  try {
+    void listen<string>('adm-prefill-url', (evt) => {
+      const link = (evt.payload || '').trim();
+      if (link) {
+        urlInput.value = link;
+        void probeAndFill();
+      }
+    });
+  } catch {}
 
   function validateUrl(value: string): boolean {
     urlErrIcon.classList.add('hidden');

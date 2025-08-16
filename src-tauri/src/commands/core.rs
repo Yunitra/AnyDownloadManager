@@ -1,8 +1,8 @@
-use tauri::State;
-use reqwest::header::{CONTENT_LENGTH, CONTENT_DISPOSITION, CONTENT_RANGE};
+use crate::payloads::ProbeResult;
 use crate::state::AppState;
-use crate::payloads::{ProbeResult};
 use crate::util::guess_category_by_ext;
+use reqwest::header::{CONTENT_DISPOSITION, CONTENT_LENGTH, CONTENT_RANGE};
+use tauri::State;
 
 fn from_hex(b: u8) -> Option<u8> {
     match b {
@@ -25,7 +25,11 @@ fn percent_decode_simple(s: &str) -> String {
                 continue;
             }
         }
-        if bytes[i] == b'+' { out.push(b' '); i += 1; continue; }
+        if bytes[i] == b'+' {
+            out.push(b' ');
+            i += 1;
+            continue;
+        }
         out.push(bytes[i]);
         i += 1;
     }
@@ -47,7 +51,9 @@ fn filename_from_cd(cd: &str) -> Option<String> {
             }
         } else if let Some(rest) = p.strip_prefix("filename=") {
             let mut v = rest.trim();
-            if v.starts_with('"') && v.ends_with('"') && v.len() >= 2 { v = &v[1..v.len()-1]; }
+            if v.starts_with('"') && v.ends_with('"') && v.len() >= 2 {
+                v = &v[1..v.len() - 1];
+            }
             filename = Some(v.to_string());
         }
     }
@@ -68,25 +74,60 @@ pub async fn probe_url(url: String) -> Result<ProbeResult, String> {
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.parse::<u64>().ok());
     // filename from Content-Disposition if present; else from URL
-    let mut file_name = if let Some(cd) = head.headers().get(CONTENT_DISPOSITION).and_then(|v| v.to_str().ok()) {
+    let mut file_name = if let Some(cd) = head
+        .headers()
+        .get(CONTENT_DISPOSITION)
+        .and_then(|v| v.to_str().ok())
+    {
         filename_from_cd(cd).unwrap_or_else(|| {
-            let raw = url.split('/').last().unwrap_or("download.bin").split('?').next().unwrap_or("download.bin");
+            let raw = url
+                .split('/')
+                .last()
+                .unwrap_or("download.bin")
+                .split('?')
+                .next()
+                .unwrap_or("download.bin");
             percent_decode_simple(raw)
         })
     } else {
-        let raw = url.split('/').last().unwrap_or("download.bin").split('?').next().unwrap_or("download.bin");
+        let raw = url
+            .split('/')
+            .last()
+            .unwrap_or("download.bin")
+            .split('?')
+            .next()
+            .unwrap_or("download.bin");
         percent_decode_simple(raw)
     };
-    if file_name.is_empty() || file_name == "/" { file_name = "download.bin".into(); }
+    if file_name.is_empty() || file_name == "/" {
+        file_name = "download.bin".into();
+    }
     // If still not good, try a tiny ranged GET to follow redirects and grab headers
     if (!file_name.contains('.')) || file_name == "download.bin" || total.is_none() {
-        if let Ok(resp) = client.get(&url).header(reqwest::header::RANGE, "bytes=0-0").send().await {
-            if let Some(cd) = resp.headers().get(CONTENT_DISPOSITION).and_then(|v| v.to_str().ok()) {
-                if let Some(n) = filename_from_cd(cd) { file_name = n; }
+        if let Ok(resp) = client
+            .get(&url)
+            .header(reqwest::header::RANGE, "bytes=0-0")
+            .send()
+            .await
+        {
+            if let Some(cd) = resp
+                .headers()
+                .get(CONTENT_DISPOSITION)
+                .and_then(|v| v.to_str().ok())
+            {
+                if let Some(n) = filename_from_cd(cd) {
+                    file_name = n;
+                }
             }
             if total.is_none() {
-                if let Some(cr) = resp.headers().get(CONTENT_RANGE).and_then(|v| v.to_str().ok()) {
-                    if let Some(t) = cr.split('/').nth(1) { total = t.parse::<u64>().ok(); }
+                if let Some(cr) = resp
+                    .headers()
+                    .get(CONTENT_RANGE)
+                    .and_then(|v| v.to_str().ok())
+                {
+                    if let Some(t) = cr.split('/').nth(1) {
+                        total = t.parse::<u64>().ok();
+                    }
                 }
             }
         }
@@ -98,14 +139,21 @@ pub async fn probe_url(url: String) -> Result<ProbeResult, String> {
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .to_string_lossy()
         .to_string();
-    Ok(ProbeResult { total, file_name, category, download_dir })
+    Ok(ProbeResult {
+        total,
+        file_name,
+        category,
+        download_dir,
+    })
 }
 
 #[tauri::command]
 pub async fn delete_download(state: State<'_, AppState>, id: String) -> Result<(), String> {
     // cancel if running
     if let Ok(map) = state.cancels.lock() {
-        if let Some(f) = map.get(&id) { f.store(true, std::sync::atomic::Ordering::Relaxed); }
+        if let Some(f) = map.get(&id) {
+            f.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
     }
     // remove files if we have meta
     if let Ok(mut metas) = state.metas.lock() {
@@ -116,6 +164,10 @@ pub async fn delete_download(state: State<'_, AppState>, id: String) -> Result<(
         }
     }
     // remove cancel flag entry
-    let _ = state.cancels.lock().map_err(|_| "State poisoned")?.remove(&id);
+    let _ = state
+        .cancels
+        .lock()
+        .map_err(|_| "State poisoned")?
+        .remove(&id);
     Ok(())
 }
