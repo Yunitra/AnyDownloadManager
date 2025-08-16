@@ -45,6 +45,7 @@ const dicts: Record<Lang, Dict> = {
     'table.status.finished': 'Finished',
     'table.status.downloading': 'Downloading',
     'table.status.failed': 'Failed',
+    'table.status.paused': 'Paused',
 
     'settings.header': 'Settings',
     'settings.cat.appearance': 'Appearance',
@@ -79,6 +80,13 @@ const dicts: Record<Lang, Dict> = {
     'dialog.common.cancel': 'Cancel',
     'dialog.common.download': 'Download',
     'dialog.common.failed': 'Operation failed',
+
+    // Context menu
+    'ctx.open': 'Open',
+    'ctx.openFolder': 'Open Folder',
+    'ctx.resume': 'Resume',
+    'ctx.pause': 'Pause',
+    'ctx.delete': 'Delete',
   },
   'zh-CN': {
     'title.main': 'Any Download Manager',
@@ -122,6 +130,7 @@ const dicts: Record<Lang, Dict> = {
     'table.status.finished': '已完成',
     'table.status.downloading': '下载中',
     'table.status.failed': '失败',
+    'table.status.paused': '已暂停',
 
     'settings.header': '设置',
     'settings.cat.appearance': '外观',
@@ -156,6 +165,13 @@ const dicts: Record<Lang, Dict> = {
     'dialog.common.cancel': '取消',
     'dialog.common.download': '开始下载',
     'dialog.common.failed': '操作失败',
+
+    // Context menu
+    'ctx.open': '打开',
+    'ctx.openFolder': '打开文件夹',
+    'ctx.resume': '恢复',
+    'ctx.pause': '暂停',
+    'ctx.delete': '删除',
   },
 };
 

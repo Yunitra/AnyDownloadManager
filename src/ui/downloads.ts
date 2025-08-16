@@ -1,4 +1,6 @@
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
+import { revealItemInDir, openPath } from '@tauri-apps/plugin-opener';
 import { applyI18n, t } from './i18n';
 
 interface StartedPayload {
@@ -15,6 +17,7 @@ interface ProgressPayload {
 }
 interface CompletedPayload { id: string; path: string }
 interface FailedPayload { id: string; error: string }
+interface CanceledPayload { id: string }
 
 type RowRefs = {
   row: HTMLDivElement;
@@ -26,6 +29,9 @@ type RowRefs = {
   bar?: HTMLDivElement; // progress bar element
   lastSpeed?: number;
   finished?: boolean;
+  paused?: boolean;
+  id: string;
+  path?: string;
 };
 
 const rows = new Map<string, RowRefs>();
@@ -58,9 +64,7 @@ function createRow(started: StartedPayload): RowRefs {
 
   const row = document.createElement('div');
   row.className = 'row';
-
-  const colSelect = document.createElement('div');
-  colSelect.innerHTML = `<input type="checkbox" data-i18n-attr="aria-label:a11y.select" aria-label="${t('a11y.select')}"/>`;
+  row.dataset.id = started.id;
 
   const colName = document.createElement('div');
   colName.className = 'name';
@@ -102,7 +106,6 @@ function createRow(started: StartedPayload): RowRefs {
   span.setAttribute('data-rel-unit', 'second');
   colDate.appendChild(span);
 
-  row.appendChild(colSelect);
   row.appendChild(colName);
   row.appendChild(colSize);
   row.appendChild(colStatus);
@@ -112,12 +115,21 @@ function createRow(started: StartedPayload): RowRefs {
   table.appendChild(row);
   applyI18n(row);
 
-  return { row, name: colName, size: colSize, status: colStatus, speed: colSpeed, date: colDate, bar };
+  const refs: RowRefs = { row, name: colName, size: colSize, status: colStatus, speed: colSpeed, date: colDate, bar, id: started.id };
+  // context menu on right click
+  row.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showContextMenu(e.pageX, e.pageY, refs);
+  });
+
+  return refs;
 }
 
 function updateProgress(payload: ProgressPayload) {
   const refs = rows.get(payload.id);
   if (!refs) return;
+  if (refs.paused) return; // don't update UI while paused
   // speed
   refs.lastSpeed = payload.speed;
   refs.speed.textContent = formatSpeed(payload.speed);
@@ -136,7 +148,7 @@ function updateProgress(payload: ProgressPayload) {
   updateStatusBar();
 }
 
-function markCompleted(id: string, _path: string) {
+function markCompleted(id: string, path: string) {
   const refs = rows.get(id);
   if (!refs) return;
   // status -> badge Finished
@@ -145,6 +157,8 @@ function markCompleted(id: string, _path: string) {
   refs.speed.textContent = '—';
   refs.lastSpeed = 0;
   refs.finished = true;
+  refs.paused = false;
+  refs.path = path;
   updateStatusBar();
 }
 
@@ -156,6 +170,7 @@ function markFailed(id: string, _error: string) {
   // keep size as-is
   refs.lastSpeed = 0;
   refs.finished = true;
+  refs.paused = false;
   updateStatusBar();
 }
 
@@ -174,6 +189,16 @@ export async function initDownloadsUI() {
   unlistenFns.push(await listen<CompletedPayload>('download_completed', (e) => markCompleted(e.payload.id, e.payload.path)));
   // failed
   unlistenFns.push(await listen<FailedPayload>('download_failed', (e) => markFailed(e.payload.id, e.payload.error)));
+  // canceled -> mark as paused in UI
+  unlistenFns.push(await listen<CanceledPayload>('download_canceled', (e) => {
+    const refs = rows.get(e.payload.id);
+    if (!refs) return;
+    refs.paused = true;
+    refs.speed.textContent = '—';
+    refs.lastSpeed = 0;
+    refs.status.innerHTML = `<div class="badge" data-i18n="table.status.paused">${t('table.status.paused')}</div>`;
+    updateStatusBar();
+  }));
   // initialize status bar to current state
   updateStatusBar();
 }
@@ -190,7 +215,7 @@ function updateStatusBar() {
   let active = 0;
   let totalSpeed = 0;
   rows.forEach((r) => {
-    const isActive = !r.finished && !!(r.lastSpeed && r.lastSpeed > 0);
+    const isActive = !r.finished && !r.paused && !!(r.lastSpeed && r.lastSpeed > 0);
     if (isActive) active++;
     if (r.lastSpeed) totalSpeed += r.lastSpeed;
   });
@@ -202,4 +227,78 @@ function updateStatusBar() {
   if (itemsEl) itemsEl.textContent = String(items);
   if (activeEl) activeEl.textContent = String(active);
   if (totalEl) totalEl.textContent = formatSpeed(totalSpeed);
+}
+
+function closeAnyMenu() {
+  document.querySelectorAll('.menu.portal[data-kind="context"]').forEach((el) => el.remove());
+}
+
+function showContextMenu(x: number, y: number, refs: RowRefs) {
+  closeAnyMenu();
+  const menu = document.createElement('div');
+  menu.className = 'menu portal';
+  menu.setAttribute('data-kind', 'context');
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+
+  const addOpt = (label: string, onClick: () => void, enabled: boolean) => {
+    const opt = document.createElement('div');
+    opt.className = 'option';
+    opt.textContent = label;
+    if (!enabled) opt.setAttribute('aria-disabled', 'true');
+    else opt.addEventListener('click', () => { onClick(); closeAnyMenu(); });
+    menu.appendChild(opt);
+  };
+
+  const canOpen = !!refs.path && !!refs.finished;
+  const canReveal = !!refs.path;
+  const canPause = !Boolean(refs.finished) && !Boolean(refs.paused) && (refs.lastSpeed || 0) > 0;
+  const canResume = !Boolean(refs.finished) && Boolean(refs.paused);
+
+  addOpt(t('ctx.open'), () => { if (refs.path) void openPath(refs.path); }, canOpen);
+  addOpt(t('ctx.openFolder'), () => { if (refs.path) void revealItemInDir(refs.path); }, canReveal);
+  addOpt(t('ctx.resume'), () => {
+    // request backend resume; only change UI on success
+    invoke('resume_download', { id: refs.id, threads: 4 })
+      .then(() => {
+        refs.paused = false;
+        if (refs.bar) {
+          // keep progress bar
+        } else if (!refs.finished) {
+          refs.status.innerHTML = `<div class="badge" data-i18n="table.status.downloading">${t('table.status.downloading')}</div>`;
+        }
+        updateStatusBar();
+      })
+      .catch((err) => {
+        console.error(err);
+        // keep paused state
+      });
+  }, canResume);
+  addOpt(t('ctx.pause'), () => {
+    // request backend cancel to actually stop bandwidth
+    void invoke('cancel_download', { id: refs.id }).catch(console.error);
+    // UI will be updated via download_canceled listener
+  }, canPause);
+  addOpt(t('ctx.delete'), () => {
+    // delete backend (also cancels if running) then remove from UI
+    void invoke('delete_download', { id: refs.id }).catch(console.error);
+    refs.row.remove();
+    rows.delete(refs.id);
+    updateStatusBar();
+  }, true);
+
+  document.body.appendChild(menu);
+
+  const onDocClick = (ev: MouseEvent) => {
+    if (!menu.contains(ev.target as Node)) { closeAnyMenu(); cleanup(); }
+  };
+  const onEsc = (ev: KeyboardEvent) => {
+    if (ev.key === 'Escape') { closeAnyMenu(); cleanup(); }
+  };
+  function cleanup() {
+    document.removeEventListener('mousedown', onDocClick, true);
+    document.removeEventListener('keydown', onEsc, true);
+  }
+  document.addEventListener('mousedown', onDocClick, true);
+  document.addEventListener('keydown', onEsc, true);
 }

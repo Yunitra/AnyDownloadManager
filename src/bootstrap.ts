@@ -44,4 +44,8 @@ import { initDownloadsUI } from './ui/downloads';
       applyThemeToDocument(e.newValue as any);
     }
   });
+  // 禁用默认右键菜单（使用自定义菜单）
+  document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  }, { capture: true });
 })();

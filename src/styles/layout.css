@@ -28,8 +28,8 @@
 .command-bar .spacer{flex:1}
 
 .table{flex:1; min-height:0; display:flex; flex-direction:column; border:1px solid var(--fx-border); border-radius:var(--fx-radius); overflow:hidden; background:var(--fx-surface-strong); box-shadow:var(--fx-shadow)}
-.table .thead{display:grid; grid-template-columns:32px 1fr 120px 140px 120px 160px; gap:8px; padding:12px; background:linear-gradient(180deg, color-mix(in srgb, var(--fx-surface-strong) 85%, var(--fx-bg) 15%), var(--fx-surface)); border-bottom:1px solid var(--fx-border)}
-.table .row{display:grid; grid-template-columns:32px 1fr 120px 140px 120px 160px; gap:8px; padding:12px; border-bottom:1px solid var(--fx-border); align-items:center; transition:background var(--fx-transition)}
+.table .thead{display:grid; grid-template-columns:1fr 120px 140px 120px 160px; gap:8px; padding:12px; background:linear-gradient(180deg, color-mix(in srgb, var(--fx-surface-strong) 85%, var(--fx-bg) 15%), var(--fx-surface)); border-bottom:1px solid var(--fx-border)}
+.table .row{display:grid; grid-template-columns:1fr 120px 140px 120px 160px; gap:8px; padding:12px; border-bottom:1px solid var(--fx-border); align-items:center; transition:background var(--fx-transition)}
 .table .row:hover{background:color-mix(in srgb, var(--fx-text) 3%, transparent)}
 .table .name{display:flex; align-items:center; gap:10px}
 .progress{height:6px; border-radius:999px; background:var(--fx-track); overflow:hidden}

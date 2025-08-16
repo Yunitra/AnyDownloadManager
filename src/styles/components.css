@@ -80,6 +80,12 @@
 .menu .option{display:block; list-style:none; padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--fx-text)}
 .menu .option:hover{background:var(--fx-hover)}
 .menu .option[aria-selected="true"]{background:var(--fx-active)}
+/* Disabled option */
+.menu .option[aria-disabled="true"]{
+  opacity:0.5;
+  pointer-events:none;
+  cursor:default;
+}
 
 /* Field wrapper for inline icons */
 .field{ position: relative; display:flex; }
