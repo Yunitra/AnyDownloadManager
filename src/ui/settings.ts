@@ -55,7 +55,7 @@ function initLanguageControls(): void {
 let currentlyOpenSelect: HTMLElement | null = null;
 
 // Reusable custom select initializer
-function initSelect(container: HTMLElement, initialValue: string, _onChange: (value: string) => void): void {
+function initSelect(container: HTMLElement, initialValue: string, onChange: (value: string) => void): void {
   const trigger = container.querySelector<HTMLButtonElement>('.trigger');
   const label = container.querySelector<HTMLSpanElement>('.selected-label');
   const menu = container.querySelector<HTMLUListElement>('.menu');
@@ -88,6 +88,7 @@ function initSelect(container: HTMLElement, initialValue: string, _onChange: (va
     // Toggle current select
     const isOpening = !container.classList.contains('open');
     container.classList.toggle('open');
+    if (trigger) trigger.setAttribute('aria-expanded', String(isOpening));
     
     // Update global tracker
     if (isOpening) {
@@ -99,9 +100,44 @@ function initSelect(container: HTMLElement, initialValue: string, _onChange: (va
 
   document.addEventListener('click', () => {
     container.classList.remove('open');
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
     if (currentlyOpenSelect === container) {
       currentlyOpenSelect = null;
     }
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      container.classList.remove('open');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      if (currentlyOpenSelect === container) currentlyOpenSelect = null;
+    }
+  });
+
+  // Option click to change selection
+  options.forEach((opt) => {
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const nextValue = opt.dataset.value || '';
+      if (nextValue === selectedValue) {
+        container.classList.remove('open');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        if (currentlyOpenSelect === container) currentlyOpenSelect = null;
+        return;
+      }
+      // Update selected state
+      options.forEach(o => o.removeAttribute('aria-selected'));
+      opt.setAttribute('aria-selected', 'true');
+      selectedValue = nextValue;
+      label.textContent = opt.textContent || '';
+      // Close
+      container.classList.remove('open');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      if (currentlyOpenSelect === container) currentlyOpenSelect = null;
+      // Notify change
+      try { onChange(selectedValue); } catch {}
+    });
   });
 
   // When language changes, update the label text

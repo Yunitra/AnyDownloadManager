@@ -86,6 +86,7 @@ pub async fn start_download(
     url: String,
     threads: u8,
     dest_dir: Option<String>,
+    file_name: Option<String>,
 ) -> Result<String, String> {
     let threads = threads.clamp(1, 32) as u64;
     let client = reqwest::Client::new();
@@ -109,49 +110,56 @@ pub async fn start_download(
         .to_ascii_lowercase()
         .contains("bytes");
 
-    // Prefer server-provided filename via Content-Disposition
-    let mut decided_name = if let Some(cd) = head
-        .headers()
-        .get(CONTENT_DISPOSITION)
-        .and_then(|v| v.to_str().ok())
-    {
-        filename_from_cd(cd).unwrap_or_else(|| {
-            let mut name = url
-                .split('/')
-                .last()
-                .unwrap_or("download.bin")
-                .split('?')
-                .next()
-                .unwrap_or("download.bin")
-                .to_string();
-            if name.is_empty() || name == "/" {
-                name = "download.bin".into();
+    // Decide filename: prefer provided file_name, else from headers/URL
+    let user_named = file_name.is_some();
+    let mut decided_name = match &file_name {
+        Some(n) => n.clone(),
+        None => {
+            if let Some(cd) = head
+                .headers()
+                .get(CONTENT_DISPOSITION)
+                .and_then(|v| v.to_str().ok())
+            {
+                filename_from_cd(cd).unwrap_or_else(|| {
+                    let mut name = url
+                        .split('/')
+                        .last()
+                        .unwrap_or("download.bin")
+                        .split('?')
+                        .next()
+                        .unwrap_or("download.bin")
+                        .to_string();
+                    if name.is_empty() || name == "/" {
+                        name = "download.bin".into();
+                    }
+                    name
+                })
+            } else {
+                let mut name = url
+                    .split('/')
+                    .last()
+                    .unwrap_or("download.bin")
+                    .split('?')
+                    .next()
+                    .unwrap_or("download.bin")
+                    .to_string();
+                if name.is_empty() || name == "/" {
+                    name = "download.bin".into();
+                }
+                name
             }
-            name
-        })
-    } else {
-        let mut name = url
-            .split('/')
-            .last()
-            .unwrap_or("download.bin")
-            .split('?')
-            .next()
-            .unwrap_or("download.bin")
-            .to_string();
-        if name.is_empty() || name == "/" {
-            name = "download.bin".into();
         }
-        name
     };
     if decided_name.is_empty() {
         decided_name = "download.bin".into();
     }
 
     // If no extension or looks like hashed name, try a quick Range-GET to read Content-Disposition
-    if !decided_name.contains('.')
-        || decided_name == "download.bin"
-        || len_opt.is_none()
-        || !accept_ranges
+    if !user_named
+        && (!decided_name.contains('.')
+            || decided_name == "download.bin"
+            || len_opt.is_none()
+            || !accept_ranges)
     {
         if let Ok(probe) = client.get(&url).header(RANGE, "bytes=0-0").send().await {
             if let Some(cd) = probe

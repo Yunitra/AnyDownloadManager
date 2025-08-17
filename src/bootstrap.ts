@@ -71,10 +71,10 @@ import { listen } from '@tauri-apps/api/event';
     });
   } catch {}
 
-  // 监听本地 HTTP Bridge 事件，从浏览器扩展无提示地接收 URL
+  // 监听本地桥事件（避免 Chrome 外部应用确认）
   try {
-    void listen<string>('adm-bridge-add-url', async (event) => {
-      const link = event.payload;
+    void listen<string>('adm-add-from-bridge', async (evt) => {
+      const link = (evt.payload || '').trim();
       if (link) {
         await openAddWindow(link);
       }

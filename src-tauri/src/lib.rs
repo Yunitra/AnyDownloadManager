@@ -27,12 +27,9 @@ pub fn run() {
 
     builder = builder.plugin(tauri_plugin_deep_link::init());
 
-    // Start localhost HTTP bridge to receive /add?url=... from the browser extension
     builder = builder.setup(|app| {
-        let handle = app.handle().clone();
-        std::thread::spawn(move || {
-            crate::server::start_http_bridge(handle);
-        });
+        // Start localhost HTTP bridge for Chrome extension
+        crate::server::start_bridge(app.handle().clone());
         Ok(())
     });
 

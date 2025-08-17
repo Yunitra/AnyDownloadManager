@@ -32,8 +32,8 @@ button{font:inherit}
 .btn.danger:hover{filter:brightness(0.95)}
 
 .icon{width:18px; height:18px; display:flex; align-items:center; justify-content:center; font-size:14px; line-height:1;}
-
-.input{height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--fx-border); background:var(--fx-surface-strong); outline:none; transition:border var(--fx-transition), box-shadow var(--fx-transition); font:inherit}
+.input{height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--fx-border); background:var(--fx-surface-strong); outline:none; transition:border var(--fx-transition), box-shadow var(--fx-transition); font:inherit; color:var(--fx-text); caret-color:var(--fx-text)}
+.input::placeholder{color:var(--fx-text-muted)}
 .input:focus{border-color:var(--fx-accent); box-shadow:0 0 0 3px var(--fx-accent-muted)}
 
 hr.sep{border:none; height:1px; background:var(--fx-border); margin:16px 0}

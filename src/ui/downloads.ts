@@ -1,7 +1,7 @@
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { revealItemInDir, openPath } from '@tauri-apps/plugin-opener';
-import { applyI18n, t } from './i18n';
+import { applyI18n, t, resolveLang } from './i18n';
 
 interface StartedPayload {
   id: string;
@@ -26,11 +26,15 @@ type RowRefs = {
   status: HTMLDivElement;
   speed: HTMLDivElement;
   date: HTMLDivElement;
+  dateSpan?: HTMLSpanElement;
   bar?: HTMLDivElement; // progress bar element
   lastSpeed?: number;
   finished?: boolean;
   id: string;
   path?: string; // full file path to final file
+  total?: number | null;
+  createdAt?: number;
+  dateTimer?: number;
 };
 
 const rows = new Map<string, RowRefs>();
@@ -101,7 +105,7 @@ function cleanupDemoRows(table: HTMLElement) {
   cleanupDemoDone = true;
 }
 
-function createRow(started: StartedPayload): RowRefs {
+function createRow(started: StartedPayload, insert: 'top' | 'append' = 'append'): RowRefs {
   const table = document.querySelector<HTMLElement>('section.table');
   if (!table) throw new Error('table not found');
   cleanupDemoRows(table);
@@ -158,10 +162,16 @@ function createRow(started: StartedPayload): RowRefs {
   row.appendChild(colSpeed);
   row.appendChild(colDate);
 
-  table.appendChild(row);
+  if (insert === 'top') {
+    const firstRow = table.querySelector<HTMLElement>(':scope > .row');
+    if (firstRow) table.insertBefore(row, firstRow);
+    else table.appendChild(row);
+  } else {
+    table.appendChild(row);
+  }
   applyI18n(row);
 
-  const refs: RowRefs = { row, name: colName, size: colSize, status: colStatus, speed: colSpeed, date: colDate, bar, id: started.id };
+  const refs: RowRefs = { row, name: colName, size: colSize, status: colStatus, speed: colSpeed, date: colDate, dateSpan: span, bar, id: started.id, total: started.total };
   // If backend provided dest_dir, build full path early so context menu "Open folder" can work before completion
   const earlyPath = safeJoin(started.dest_dir, started.file_name);
   if (earlyPath) refs.path = earlyPath;
@@ -173,6 +183,65 @@ function createRow(started: StartedPayload): RowRefs {
   });
 
   return refs;
+}
+
+// Compute the best unit and value for relative time given a timestamp
+function computeRelParts(tsMs: number): { value: number; unit: Intl.RelativeTimeFormatUnit } {
+  const diffMs = tsMs - Date.now(); // negative => in the past
+  const abs = Math.abs(diffMs);
+  const sec = 1000;
+  const min = 60 * sec;
+  const hour = 60 * min;
+  const day = 24 * hour;
+  if (abs < 60 * sec) {
+    return { value: Math.round(diffMs / sec), unit: 'second' };
+  } else if (abs < 60 * min) {
+    return { value: Math.round(diffMs / min), unit: 'minute' };
+  } else if (abs < 24 * hour) {
+    return { value: Math.round(diffMs / hour), unit: 'hour' };
+  } else {
+    return { value: Math.round(diffMs / day), unit: 'day' };
+  }
+}
+
+// Update the row's date span with relative label and absolute time tooltip
+function updateRowDate(refs: RowRefs): void {
+  if (!refs.createdAt) return;
+  const span = refs.dateSpan || refs.date.querySelector('span');
+  if (!span) return;
+  const { value, unit } = computeRelParts(refs.createdAt);
+  span.setAttribute('data-rel-time', String(value));
+  span.setAttribute('data-rel-unit', unit);
+  try {
+    span.title = new Date(refs.createdAt).toLocaleString(resolveLang());
+  } catch {
+    span.title = new Date(refs.createdAt).toLocaleString();
+  }
+  // Re-render only the date cell for i18n/relative time
+  applyI18n(refs.date);
+}
+
+// Schedule next update based on current age/unit boundary
+function scheduleRowDateUpdate(refs: RowRefs): void {
+  if (!refs.createdAt) return;
+  if (refs.dateTimer != null) { clearTimeout(refs.dateTimer); refs.dateTimer = undefined; }
+  // Update now
+  updateRowDate(refs);
+  const now = Date.now();
+  const ageMs = Math.max(0, now - refs.createdAt); // clamp to avoid negative modulo
+  const sec = 1000;
+  const min = 60 * sec;
+  const hour = 60 * min;
+  const day = 24 * hour;
+  const unit = computeRelParts(refs.createdAt).unit;
+  let unitMs = sec;
+  if (unit === 'minute') unitMs = min;
+  else if (unit === 'hour') unitMs = hour;
+  else if (unit === 'day') unitMs = day;
+  // Time until next boundary
+  let delay = unitMs - (ageMs % unitMs);
+  if (unit === 'second') delay = Math.max(500, delay); // avoid too-frequent updates
+  refs.dateTimer = window.setTimeout(() => scheduleRowDateUpdate(refs), delay + 10);
 }
 
 function updateProgress(payload: ProgressPayload) {
@@ -187,6 +256,8 @@ function updateProgress(payload: ProgressPayload) {
   } else {
     refs.size.textContent = formatBytes(payload.received);
   }
+  // remember latest known total
+  refs.total = payload.total;
   // progress bar
   if (refs.bar && payload.total > 0) {
     const pct = Math.max(0, Math.min(100, Math.floor((payload.received / payload.total) * 100)));
@@ -206,6 +277,10 @@ function markCompleted(id: string, path: string) {
   refs.lastSpeed = 0;
   refs.finished = true;
   refs.path = path;
+  // size -> only total
+  if (refs.total && refs.total > 0) {
+    refs.size.textContent = formatBytes(refs.total);
+  }
   updateStatusBar();
   // persist
   const existing = loadHistory().find(h => h.id === id);
@@ -213,7 +288,7 @@ function markCompleted(id: string, path: string) {
     id,
     url: existing?.url || '',
     file_name: existing?.file_name || refs.name.textContent || 'download.bin',
-    total: existing?.total ?? null,
+    total: existing?.total ?? refs.total ?? null,
     path,
     status: 'finished',
     created_at: existing?.created_at || Date.now(),
@@ -248,8 +323,11 @@ export async function initDownloadsUI() {
   // Render finished history first
   const hist = loadHistory().filter(h => h.status === 'finished' || h.status === 'failed');
   hist.forEach((h) => {
-    const refs = createRow({ id: h.id, url: h.url, file_name: h.file_name, total: h.total, dest_dir: h.path ? undefined : undefined });
+    const refs = createRow({ id: h.id, url: h.url, file_name: h.file_name, total: h.total, dest_dir: h.path ? undefined : undefined }, 'append');
     rows.set(h.id, refs);
+    // Use stored created_at to set relative/absolute date
+    refs.createdAt = h.created_at;
+    scheduleRowDateUpdate(refs);
     if (h.status === 'finished' && h.path) {
       markCompleted(h.id, h.path);
     } else if (h.status === 'failed') {
@@ -259,9 +337,12 @@ export async function initDownloadsUI() {
 
   // started
   unlistenFns.push(await listen<StartedPayload>('download_started', (e) => {
-    const refs = createRow(e.payload);
+    const refs = createRow(e.payload, 'top');
     rows.set(e.payload.id, refs);
     updateStatusBar();
+    // Set created_at now for immediate UI display
+    refs.createdAt = Date.now();
+    scheduleRowDateUpdate(refs);
     // persist basic info
     upsertHistory({
       id: e.payload.id,
@@ -287,6 +368,7 @@ export async function initDownloadsUI() {
 export function disposeDownloadsUI() {
   unlistenFns.forEach((fn) => fn());
   unlistenFns = [];
+  rows.forEach((r) => { if (r.dateTimer != null) clearTimeout(r.dateTimer); });
   rows.clear();
   updateStatusBar();
 }
@@ -333,11 +415,12 @@ function showContextMenu(x: number, y: number, refs: RowRefs) {
   const canOpen = !!refs.path && !!refs.finished;
   const canReveal = !!refs.path;
 
-  addOpt(t('ctx.open'), () => { if (refs.path) void openPath(refs.path); }, canOpen);
-  addOpt(t('ctx.openFolder'), () => { if (refs.path) void revealItemInDir(refs.path); }, canReveal);
+  addOpt(t('ctx.open'), () => { if (refs.path) void openPath(refs.path).catch(console.error); }, canOpen);
+  addOpt(t('ctx.openFolder'), () => { if (refs.path) void revealItemInDir(refs.path).catch(console.error); }, canReveal);
   addOpt(t('ctx.delete'), () => {
     // delete backend (also cancels if running) then remove from UI
     void invoke('delete_download', { id: refs.id }).catch(console.error);
+    if (refs.dateTimer != null) { clearTimeout(refs.dateTimer); refs.dateTimer = undefined; }
     refs.row.remove();
     rows.delete(refs.id);
     updateStatusBar();

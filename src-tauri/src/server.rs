@@ -1,49 +1,57 @@
-use std::net::ToSocketAddrs;
-use tauri::Emitter;
-use tiny_http::{Server, Response, Request};
+use std::thread;
+use tauri::{AppHandle, Emitter};
+use tiny_http::{Header, Method, Response, Server, StatusCode};
+use serde::Deserialize;
 
-pub fn start_http_bridge(app: tauri::AppHandle) {
-    // Bind to 127.0.0.1:21234, retry a few times if in use
-    let addr = ("127.0.0.1", 21234).to_socket_addrs().ok().and_then(|mut it| it.next());
-    let Some(addr) = addr else { return; };
+#[derive(Deserialize)]
+struct AddReq {
+  url: String,
+}
 
-    let server = match Server::http(addr) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("ADM http bridge failed to start: {e}");
-            return;
-        }
+pub fn start_bridge(app: AppHandle) {
+  // Spawn a lightweight thread HTTP server on localhost
+  thread::spawn(move || {
+    let server = match Server::http("127.0.0.1:47891") {
+      Ok(s) => s,
+      Err(e) => {
+        eprintln!("ADM bridge server failed to bind: {e}");
+        return;
+      }
     };
 
-    for req in server.incoming_requests() {
-        handle_request(&app, req);
-    }
-}
+    for mut req in server.incoming_requests() {
+      let method = req.method().clone();
+      let path = req.url().to_string();
 
-fn handle_request(app: &tauri::AppHandle, req: Request) {
-    let url = req.url().to_string(); // like "/add?url=..."
-    if url.starts_with("/add") || url.starts_with("/v1/add") {
-        let url_param = extract_query_param(&url, "url").unwrap_or_default();
-        if !url_param.is_empty() {
-            let _ = app.emit("adm-bridge-add-url", url_param);
+      // CORS preflight
+      if method == Method::Options && path == "/add" {
+        let resp = Response::from_string("")
+          .with_status_code(StatusCode(204))
+          .with_header(Header::from_bytes(b"Access-Control-Allow-Origin", b"*").unwrap())
+          .with_header(Header::from_bytes(b"Access-Control-Allow-Headers", b"Content-Type").unwrap())
+          .with_header(Header::from_bytes(b"Access-Control-Allow-Methods", b"POST, OPTIONS").unwrap());
+        let _ = req.respond(resp);
+        continue;
+      }
+
+      if method == Method::Post && path == "/add" {
+        let mut body = String::new();
+        let _ = req.as_reader().read_to_string(&mut body);
+        let parsed: Result<AddReq, _> = serde_json::from_str(&body);
+        if let Ok(p) = parsed {
+          let _ = app.emit("adm-add-from-bridge", p.url);
         }
-        let _ = req.respond(Response::from_string("OK"));
-        return;
+        let resp = Response::from_string("OK")
+          .with_status_code(StatusCode(200))
+          .with_header(Header::from_bytes(b"Access-Control-Allow-Origin", b"*").unwrap())
+          .with_header(Header::from_bytes(b"Access-Control-Allow-Headers", b"Content-Type").unwrap())
+          .with_header(Header::from_bytes(b"Access-Control-Allow-Methods", b"POST, OPTIONS").unwrap());
+        let _ = req.respond(resp);
+      } else {
+        let _ = req.respond(
+          Response::from_string("Not Found").with_status_code(StatusCode(404))
+        );
+      }
     }
-
-    let _ = req.respond(Response::from_string("Not Found").with_status_code(404));
-}
-
-fn extract_query_param(url: &str, key: &str) -> Option<String> {
-    let Some(idx) = url.find('?') else { return None; };
-    let qs = &url[idx + 1..];
-    for pair in qs.split('&') {
-        let mut it = pair.splitn(2, '=');
-        let k = it.next().unwrap_or("");
-        let v = it.next().unwrap_or("");
-        if k == key {
-            return urlencoding::decode(v).ok().map(|s| s.into_owned());
-        }
-    }
-    None
+  });
 }

@@ -2,7 +2,7 @@ import './styles/index.css';
 import { initMicroInteractions } from './ui/microinteractions';
 import { wireWindowControls } from './ui/windowControls';
 import addHtml from './components/add.html?raw';
-import { initI18n } from './ui/i18n';
+import { initI18n, t } from './ui/i18n';
 import { applyThemeToDocument, getSavedTheme } from './ui/settings';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -91,38 +91,42 @@ function joinPath(dir: string, sub: string): string {
     }
   }
 
+  // Keep last detected info from probe
+  let lastDetectedCat: string = 'other';
+  let lastDownloadDir: string = '';
+
+  function updateCategoryLabel() {
+    const val = getCategory();
+    if (val === 'auto') {
+      const detected = lastDetectedCat || 'other';
+      catLabel.textContent = `${t('sidebar.btn.auto')}（${t('sidebar.btn.' + detected)}）`;
+      // avoid applyI18n overriding dynamic label
+      catLabel.removeAttribute('data-i18n');
+    } else {
+      catLabel.textContent = t(`sidebar.btn.${val}`);
+      catLabel.setAttribute('data-i18n', `sidebar.btn.${val}`);
+    }
+  }
+
   function getCategory(): string {
     return catFx.dataset.value || 'other';
   }
 
   function setCategory(val: string, fromUser = false) {
     const options = Array.from(catMenu.querySelectorAll<HTMLElement>('.option'));
-    let label = val;
     options.forEach((opt) => {
       const selected = opt.getAttribute('data-value') === val;
       opt.setAttribute('aria-selected', selected ? 'true' : 'false');
-      if (selected) label = opt.textContent || val;
     });
     catFx.dataset.value = val;
-    catLabel.textContent = label;
-    // Keep i18n key in sync so language switching updates label correctly
-    catLabel.setAttribute('data-i18n', `sidebar.btn.${val}`);
+    updateCategoryLabel();
     if (fromUser) {
       catFx.dataset.userChanged = '1';
       try { localStorage.setItem('adm.selectedCategory', val); } catch {}
-      // Update path suffix if last segment is a category
-      const cur = pathInput.value;
-      if (cur) {
-        const parts = cur.replace(/\\/g, '/').split('/');
-        const cats = ['image','music','video','apps','document','compressed','other'];
-        if (val !== 'auto') {
-          if (parts.length >= 1 && cats.includes(parts[parts.length - 1])) {
-            parts[parts.length - 1] = val;
-            const sep = cur.includes('\\') ? '\\' : '/';
-            pathInput.value = parts.join(sep);
-          }
-        }
-      }
+      // Recompute full path on user selection
+      const base = lastDownloadDir || '';
+      const catForPath = val === 'auto' ? (lastDetectedCat || 'other') : val;
+      pathInput.value = joinPath(base, catForPath);
     }
   }
 
@@ -137,18 +141,23 @@ function joinPath(dir: string, sub: string): string {
     sizeEl.textContent = '…';
     try {
       const res = await invoke<{ total: number | null; file_name: string; category: string; download_dir: string }>('probe_url', { url });
+      lastDetectedCat = (res.category || 'other');
+      lastDownloadDir = (res.download_dir || '');
       // Category: prefer existing selection if user already changed it, otherwise from probe or stored prefer
       if (!catFx.dataset.userChanged) {
         const prefer = localStorage.getItem('adm.selectedCategory') || '';
         setCategory(prefer || 'auto');
       }
+      // Always refresh the auto label as detection may have changed
+      updateCategoryLabel();
       sizeEl.textContent = formatBytes(res.total);
-      if (!pathInput.value) {
-        const base = res.download_dir || '';
-        const chosen = getCategory();
-        const catForPath = chosen === 'auto' ? (res.category || 'other') : chosen;
-        pathInput.value = joinPath(base, catForPath);
-      }
+      const chosen = getCategory();
+      const base = lastDownloadDir;
+      const catForPath = chosen === 'auto' ? (lastDetectedCat || 'other') : chosen;
+      // If empty OR current path doesn't match chosen category, update it
+      const cur = (pathInput.value || '').trim();
+      const shouldUpdate = !cur || !cur.replace(/\\/g, '/').endsWith(`/${catForPath}`);
+      if (shouldUpdate) pathInput.value = joinPath(base, catForPath);
       if (!nameInput.value) {
         nameInput.value = res.file_name || 'download.bin';
       }
@@ -222,12 +231,19 @@ function joinPath(dir: string, sub: string): string {
     const url = (urlInput.value || '').trim();
     if (!validateUrl(url)) return;
     const threads = 4;
-    const destDir = (pathInput.value || '').trim();
+    let destDir = (pathInput.value || '').trim();
+    // If user clicked Download before probe completed, synthesize a path now
+    if (!destDir) {
+      const chosen = getCategory();
+      const catForPath = chosen === 'auto' ? (lastDetectedCat || 'other') : chosen;
+      destDir = joinPath(lastDownloadDir || '', catForPath);
+      pathInput.value = destDir;
+    }
     const fileName = (nameInput.value || '').trim() || 'download.bin';
     startBtn.disabled = true;
     try {
       // Start download and close window immediately
-      void invoke<string>('start_download', { url, threads, dest_dir: destDir, file_name: fileName }).catch((err) => {
+      void invoke<string>('start_download', { url, threads, destDir, fileName }).catch((err) => {
         console.error(err);
       });
       await closeWindow();
@@ -239,5 +255,7 @@ function joinPath(dir: string, sub: string): string {
 
   // Init: apply preferred category and focus URL
   setCategory(localStorage.getItem('adm.selectedCategory') || 'auto');
+  // Update dynamic auto label on language change
+  window.addEventListener('adm:lang-changed', () => updateCategoryLabel());
   setTimeout(() => urlInput.focus(), 0);
 })();

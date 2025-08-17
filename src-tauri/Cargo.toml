@@ -32,7 +32,6 @@ manic = { version = "0.8.1", features = ["progress"] }
 indicatif = "0.16"
 console = { version = "0.16", features = ["std"] }
 tiny_http = "0.12"
-urlencoding = "2"
 
 [profile.dev]
 incremental = true
